@@ -273,6 +273,8 @@ class Client:
 		
 		# Set the timeout value of the socket to 0.5sec
 		# ...
+
+		
 		
 		try:
 			# Bind the socket to the address using the RTP port given by the client user
@@ -288,3 +290,4 @@ class Client:
 			self.exitClient()
 		else: # When the user presses cancel, resume playing.
 			self.playMovie()
+
