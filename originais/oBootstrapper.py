@@ -41,6 +41,7 @@ def handler(connection, address):
                 response = pickle.dumps(neighbours[node_id])
             else:
                 response = pickle.dumps({"error": "Node not found"})
+                
         else:
             response = pickle.dumps({"error": "Invalid command"})
         
