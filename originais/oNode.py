@@ -1,8 +1,8 @@
 import socket
 import threading
-import sys
 import pickle
 import netifaces
+import sys
 
 PORT = 5000  # Define a single, fixed port for all oNode instances
 BOOTSTRAPPER_IP = '10.0.34.2'  # IP of the bootstrapper
@@ -11,10 +11,11 @@ class ONode:
     def __init__(self):
         self.neighbors = []  # Initialize an empty neighbors list
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        
+        self.name = sys.argv[1] # Node name -- Important to distinguish this node from others
+
         # Allow reuse of the same address
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        
+
         # Bind to the fixed port
         self.server_socket.bind(('0.0.0.0', PORT))
         self.server_socket.listen(5)
@@ -41,7 +42,7 @@ class ONode:
                     try:
                         bootstrapper_socket.connect((BOOTSTRAPPER_IP, PORT))
                         print("[INFO] Connected to bootstrapper")
-                        message = f"NEIGHBOURS {node_ip}"  # Request neighbors for this node's IP
+                        message = f"NEIGHBOURS {self.name}"  # Request neighbors for this node's IP
                         print("[INFO] Requesting neighbors from bootstrapper...")
                         bootstrapper_socket.send(message.encode('utf-8'))
                         # Receive the list of neighbors from bootstrapper
