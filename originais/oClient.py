@@ -23,7 +23,7 @@ class oClient:
             try:
                 message = str.encode('pop')
                 self.server_conn.send(message)
-                pop_list = self.server_conn.recvfrom(1024)
+                pop_list = self.server_conn.recv(1024)
                 self.pointsofpresence = pop_list
                 print('POPs obtidos com sucesso.')
                 message = str.encode('pop_received')
@@ -31,6 +31,9 @@ class oClient:
                 break
             except socket.timeout:
                 print('Timeout - Reenvio de pedido POPs.')
+            except:
+                print('Servidor não está a atender pedidos. Tente novamente mais tarde. :D')
+                break
 
     def evaluate_point(self,ponto):
         # TODO avaliar métricas como largura de banda, perda, números de saltos...
