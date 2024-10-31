@@ -10,18 +10,17 @@ pops = ['10.0.27.1',
 
 class Servidor:    
 
-    def __init__(self):
-        # Establishes variables
-        self.SERVER_PORT = 6000
-        self.SERVER_HOST = '0.0.0.0'  # Allows connections from any IP
-        self.server_socket = None
-        
-        # Creates necessary data structures
-        self.connections = []  # List to keep track of active connections
-
-        # Set up the server socket
-        self.create_socket()
-        self.listen_for_connections()
+	def __init__(self):
+	    # Establishes variables
+	    self.SERVER_PORT = 6000
+	    self.SERVER_HOST = '0.0.0.0'  # Allows connections from any IP
+	    self.server_socket = None
+	
+	    # Creates necessary data structures
+	    self.connections = []  # List to keep track of active connections	
+	    # Set up the server socket
+	    self.create_socket()
+	    self.listen_for_connections()
 
 	def create_socket(self):
 	    try:
