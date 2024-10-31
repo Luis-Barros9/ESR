@@ -36,7 +36,8 @@ class oClient:
                 break
 
     def evaluate_point(self,ponto):
-        # TODO avaliar métricas como largura de banda, perda, números de saltos...
+        # TODO avaliar métricas como largura de banda,latência, perda, números de saltos...
+        # usar pings com prai 10 vezes ou algo assim
         return 1
 
     def evaluate_points_of_presence(self):
