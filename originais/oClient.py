@@ -2,9 +2,13 @@ import socket
 import pickle
 import threading
 import time
+import subprocess
+import re
 
 # 60 segundos 
 MONITOR_INTERVAL = 60
+NUMBER_PINGS = 10
+PING_SIZE = 128
 
 class oClient:
     def __init__(self):
@@ -38,7 +42,37 @@ class oClient:
     def evaluate_point(self,ponto):
         # TODO avaliar métricas como largura de banda,latência, perda, números de saltos...
         # usar pings com prai 10 vezes ou algo assim
-        return 1
+        try:
+            output = subprocess.check_output(['ping', '-c', str(NUMBER_PINGS),'-s', str(PING_SIZE), '-q',ponto])
+                    # Extrai o tempo de resposta de cada pacote recebido
+            print(output)
+            stats_match = re.search(r'(\d+) packets transmitted, (\d+) received,.*?(\d+)% packet loss', output)
+            if stats_match:
+                transmitted_packets = int(stats_match.group(1))
+                received_packets = int(stats_match.group(2))
+                packet_loss = int(stats_match.group(3))
+            else:
+                transmitted_packets = received_packets = packet_loss = None
+
+            # Extrai valores de RTT min, avg, max, mdev
+            rtt_match = re.search(r'rtt min/avg/max/mdev = (\d+\.\d+)/(\d+\.\d+)/(\d+\.\d+)/(\d+\.\d+)', output)
+            if rtt_match:
+                rtt_min = float(rtt_match.group(1))
+                rtt_avg = float(rtt_match.group(2))
+                rtt_max = float(rtt_match.group(3))
+                rtt_mdev = float(rtt_match.group(4))
+            else:
+                rtt_min = rtt_avg = rtt_max = rtt_mdev = None
+            print('Ponto de presença: %s' % ponto)
+            print('Pacotes enviados: %d' % transmitted_packets)
+            print('Pacotes recebidos: %d' % received_packets)
+            print('Perda de pacotes: %d%%' % packet_loss)
+            print('RTT min/avg/max/mdev = %.3f/%.3f/%.3f/%.3f ms' % (rtt_min, rtt_avg, rtt_max, rtt_mdev))
+            return 1
+
+        except subprocess.CalledProcessError:
+            print('Erro no subprocesso.')
+            return -1
 
     def evaluate_points_of_presence(self):
         # avaliar pontos de presenca

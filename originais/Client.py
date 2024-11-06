@@ -6,7 +6,9 @@ import socket, threading, sys, traceback, os
 from RtpPacket import RtpPacket
 
 CACHE_FILE_NAME = "cache-"
-CACHE_FILE_EXT = ".jpg"
+
+PORT = 5000  # Define a single, fixed port for all oNode instances
+BOOTSTRAPPER_IP = '10.0.34.2'  # IP of the bootstrapper
 
 class Client:
 	INIT = 0
@@ -39,7 +41,7 @@ class Client:
 		self.frameNbr = 0
 	
 	def getPointsOfPresence(self):
-		# Conectar ao servidor através de TCP para obter a lista dos pontos de presença
+		# Conectar ao servidor através de UDP para obter a lista dos pontos de presença
 		# Escolher dos diferentes pontos de presença, a qual ligar
 		# Guardar o endereço e a porta do ponto de presença escolhido
 		# Fechar a ligação ao servido
