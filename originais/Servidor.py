@@ -1,6 +1,6 @@
 import sys
 import socket
-
+import json
 # Lista com POPs
 pops = ['10.0.27.1',
         '10.0.26.1',
@@ -49,8 +49,12 @@ class Servidor:
     def send_pops(self, client_address):
         try:
             # Envia a lista de POPs para o cliente
-            pops_message = "Lista de POP IPs: " + ", ".join(pops)
-            self.server_socket.sendto(pops_message.encode('utf-8'), client_address)
+            print(pops)
+            # Enviar a lista de POPs para o cliente com pickle
+            data = json.dumps(pops)
+
+
+            self.server_socket.sendto(data.encode('utf-8'), client_address)
             print(f"POPs enviados para {client_address}. Aguardando confirmação...")
 
         except Exception as e:

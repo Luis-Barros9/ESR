@@ -1,9 +1,10 @@
 import socket
-import pickle
 import threading
 import time
 import subprocess
+import multiprocessing
 import re
+import json
 
 # 60 segundos 
 MONITOR_INTERVAL = 60
@@ -27,8 +28,9 @@ class oClient:
             try:
                 message = str.encode('pop')
                 self.server_conn.send(message)
-                pop_list = self.server_conn.recv(1024)
-                self.pointsofpresence = pop_list
+                pop_list = self.server_conn.recv(1024).decode('utf-8')
+                self.pointsofpresence = json.loads(pop_list)
+                print(self.pointsofpresence)
                 print('POPs obtidos com sucesso.')
                 message = str.encode('pop_received')
                 self.server_conn.send(message)
@@ -43,7 +45,7 @@ class oClient:
         # TODO avaliar métricas como largura de banda,latência, perda, números de saltos...
         # usar pings com prai 10 vezes ou algo assim
         try:
-            output = subprocess.check_output(['ping', '-c', str(NUMBER_PINGS),'-s', str(PING_SIZE), '-q',ponto])
+            output = subprocess.check_output(['ping', '-c', str(NUMBER_PINGS),'-s', str(PING_SIZE), '-q',ponto]).decode('utf-8')
                     # Extrai o tempo de resposta de cada pacote recebido
             print(output)
             stats_match = re.search(r'(\d+) packets transmitted, (\d+) received,.*?(\d+)% packet loss', output)
@@ -76,17 +78,25 @@ class oClient:
 
     def evaluate_points_of_presence(self):
         # avaliar pontos de presenca
+        # versão sequencial provavelmente vai ser apagada
         if len(self.pointsofpresence):
-            best = self.pointsofpresence[0]
-            max = self.evaluate_point(best)
 
-            # escolher o melhor ponto de presença no momento
-            for p in self.pointsofpresence[1:]:
-                rate = self.evaluate_point(p)
-                if rate > max:
-                    max = rate
-                    best = p
+            avaliacoes = []
+            for p in self.pointsofpresence:
+                avaliacoes.append(self.evaluate_point(p))
+            best = self.pointsofpresence[avaliacoes.index(max(avaliacoes))]
+            print('O melhor ponto de presença é: %s' % best)
             self.pop = best
+
+    def evaluate_points_of_presence_parallel(self):
+        # avaliar pontos de presenca
+        if len(self.pointsofpresence):
+            with multiprocessing.Pool(processes=len(self.pointsofpresence)) as pool:
+                avaliacoes = pool.map(self.evaluate_point, self.pointsofpresence)
+
+            print(avaliacoes)
+
+
     
     def monitor_points_of_presence(self):
         while True:
@@ -95,7 +105,7 @@ class oClient:
 
     def start(self):
         self.get_points_of_presence()
-        #threading.Thread(target=self.evaluate_points_of_presence, args=(self)).start()
+        threading.Thread(target=self.evaluate_points_of_presence_parallel, args=()).start()
 
 if __name__ == "__main__":
     
