@@ -71,12 +71,14 @@ class oClient:
 
             # TODO melhorar a avaliação, para tornar algo mais completo, englobando mais parametros como desvio e duplicados
             # e mais cuidados com o packet loss
-
-            return float(rtt_avg) * (1 - float(packet_loss)/100)
+            if packet_loss == 100:
+                return -1000
+                # valores negativos porque quanto menor o tempo, melhor a rede
+            return -(rtt_avg * 100.0) / (100.0 - packet_loss)
 
         except subprocess.CalledProcessError:
             print('Erro no subprocesso.')
-            return -1
+            return -10000
 
     def evaluate_points_of_presence(self):
         # avaliar pontos de presenca
