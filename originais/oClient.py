@@ -47,30 +47,32 @@ class oClient:
         try:
             output = subprocess.check_output(['ping', '-c', str(NUMBER_PINGS),'-s', str(PING_SIZE), '-q',ponto]).decode('utf-8')
                     # Extrai o tempo de resposta de cada pacote recebido
-            print(output)
-            stats_match = re.search(r'(\d+) packets transmitted, (\d+) received,.*?(\d+)% packet loss', output)
+            #print(output)
+            stats_match = re.search(r'(\d+) packets transmitted, (\d+) received(?:, \+?(\d+) duplicates)?, (\d+)% packet loss', output)
             if stats_match:
                 transmitted_packets = int(stats_match.group(1))
                 received_packets = int(stats_match.group(2))
-                packet_loss = int(stats_match.group(3))
+                duplicate_packets = int(stats_match.group(3)) if stats_match.group(3) else 0
+                packet_loss = int(stats_match.group(4))
             else:
-                transmitted_packets = received_packets = packet_loss = None
-
+                transmitted_packets = duplicate_packets = received_packets = packet_loss = None
             # Extrai valores de RTT min, avg, max, mdev
-            rtt_match = re.search(r'rtt min/avg/max/mdev = (\d+\.\d+)/(\d+\.\d+)/(\d+\.\d+)/(\d+\.\d+)', output)
+            rtt_match = re.search(r'rtt min/avg/max/mdev = \d+\.\d+/(\d+\.\d+)/\d+\.\d+/(\d+\.\d+)', output)
             if rtt_match:
-                rtt_min = float(rtt_match.group(1))
-                rtt_avg = float(rtt_match.group(2))
-                rtt_max = float(rtt_match.group(3))
-                rtt_mdev = float(rtt_match.group(4))
+                rtt_avg = float(rtt_match.group(1))
+                rtt_mdev = float(rtt_match.group(2))
             else:
-                rtt_min = rtt_avg = rtt_max = rtt_mdev = None
-            print('Ponto de presença: %s' % ponto)
-            print('Pacotes enviados: %d' % transmitted_packets)
-            print('Pacotes recebidos: %d' % received_packets)
-            print('Perda de pacotes: %d%%' % packet_loss)
-            print('RTT min/avg/max/mdev = %.3f/%.3f/%.3f/%.3f ms' % (rtt_min, rtt_avg, rtt_max, rtt_mdev))
-            return 1
+                rtt_avg = rtt_mdev = None
+            #Debug
+            print('POP: %s\nPacotes enviados: %d | Pacotes recebidos: %d | Perda de pacotes: %d%% | Pacotes duplicados: %d | RTT avg/mdev: %.2f/%.2f ms' %
+      (ponto, transmitted_packets, received_packets, packet_loss, duplicate_packets or 0, rtt_avg, rtt_mdev))
+
+            # Avaliar estado de rede com os dados passados
+
+            # TODO melhorar a avaliação, para tornar algo mais completo, englobando mais parametros como desvio e duplicados
+            # e mais cuidados com o packet loss
+
+            return float(rtt_avg) * (1 - float(packet_loss)/100)
 
         except subprocess.CalledProcessError:
             print('Erro no subprocesso.')
@@ -86,7 +88,10 @@ class oClient:
                 avaliacoes.append(self.evaluate_point(p))
             best = self.pointsofpresence[avaliacoes.index(max(avaliacoes))]
             print('O melhor ponto de presença é: %s' % best)
-            self.pop = best
+            if self.pop != best:
+                print('O ponto de presença foi alterado de %s para %s' % (self.pop, best))
+                self.pop = best
+                # Executar algum tipo de alteração???
 
     def evaluate_points_of_presence_parallel(self):
         # avaliar pontos de presenca
@@ -95,6 +100,12 @@ class oClient:
                 avaliacoes = pool.map(self.evaluate_point, self.pointsofpresence)
 
             print(avaliacoes)
+            best = self.pointsofpresence[avaliacoes.index(max(avaliacoes))]
+            print('O melhor ponto de presença é: %s' % best)
+            if self.pop != best:
+                print('O ponto de presença foi alterado de %s para %s' % (self.pop, best))
+                self.pop = best
+                # Executar algum tipo de alteração???
 
 
     
@@ -108,6 +119,7 @@ class oClient:
         threading.Thread(target=self.evaluate_points_of_presence_parallel, args=()).start()
 
 if __name__ == "__main__":
+
     
 
     client = oClient()
