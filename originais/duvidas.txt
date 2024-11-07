@@ -1,2 +1,0 @@
-1. Como decidimos quais os pontos de presença associados a cada cliente
-2 Estratégias de abandono para o bootstrapper???

@@ -1,0 +1,5 @@
+1. Como decidimos quais os pontos de presença associados a cada cliente?
+2. Estratégias de abandono para o bootstrapper?
+3. É suposto só nos preocuparmos com o overlay?
+4. Podemos usar o bootstrapper para saber vizinhos de vizinhos? Ex: em caso de falha de todos os vizinhos, pedir outros ao bootstrapper
+5. Estratégias de arvores de distribuição - 
