@@ -4,12 +4,14 @@ import time
 import subprocess
 import multiprocessing
 import re
-import json
+import pickle
 
 # 60 segundos 
 MONITOR_INTERVAL = 60
 NUMBER_PINGS = 10
 PING_SIZE = 128
+BOOTSTRAPPER_IP = '10.0.34.2'  # IP of the bootstrapper
+POP_PORT = 5000
 
 class oClient:
     def __init__(self):
@@ -17,31 +19,33 @@ class oClient:
         self.pop = '' # Ponto de presença a ser usado
         self.timeout = 3 # Tempo para timeout em segundos
 
-        # Socket comunicação servidor
+        # Socket comunicação PoP escolhido ????
         self.server_conn = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        self.server_conn.settimeout(self.timeout)
-        self.server_conn.connect(('10.0.0.10', 6000))
+
 
     # Get points of presence from server
     def get_points_of_presence(self):
-        while True:
+        # Connect to bootstrapper to request neighbors for each IP
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as bootstrapper_socket:
             try:
-                message = str.encode('pop')
-                self.server_conn.send(message)
-                pop_list = self.server_conn.recv(1024).decode('utf-8')
-                self.pointsofpresence = json.loads(pop_list)
-                print(self.pointsofpresence)
-                print('POPs obtidos com sucesso.')
-                message = str.encode('pop_received')
-                self.server_conn.send(message)
-                break
-            except socket.timeout:
-                print('Timeout - Reenvio de pedido POPs.')
-            except:
-                print('Servidor não está a atender pedidos. Tente novamente mais tarde. :D')
-                break
+                bootstrapper_socket.connect((BOOTSTRAPPER_IP, PORT))
+                print("[INFO] Connected to bootstrapper")
+                message = f"PoPs"  # Request neighbors for this node
+                print("[INFO] Requesting PoPs from bootstrapper...")
+                bootstrapper_socket.send(message.encode('utf-8'))
+                # Receive the list of neighbors from bootstrapper
+                response = bootstrapper_socket.recv(4096)
+                pops = pickle.loads(response)
+                for n in neighbors_for_ip:
+                    self.pointsofpresence.append(n)
+                print(f"[INFO] PoPs received from bootstrapper: {pops}")
+            
+            except Exception as e:
+                print(f"[ERROR] Failed to retrieve PoPs from bootstrapper: {e}")
 
-    def evaluate_point(self,ponto):
+    '''
+    def evaluate_point(self,ponto): 
+        # criar protocolo para avaliação entrre cliente-pop -> pop deve entre outros parametros enviar dados sobre a sua conexão ao servidor
         # TODO avaliar métricas como largura de banda,latência, perda, números de saltos...
         # usar pings com prai 10 vezes ou algo assim
         try:
@@ -79,6 +83,12 @@ class oClient:
         except subprocess.CalledProcessError:
             print('Erro no subprocesso.')
             return -10000
+        ''' 
+    # ter em conta que podemos comunicar com vários pops ao mesmo tempo, ou seja usar portas diferentes para avaliação, mas ter cuidado
+    def evaluate_point(self,ponto,porta):
+        
+
+
 
     def evaluate_points_of_presence(self):
         # avaliar pontos de presenca
@@ -113,12 +123,13 @@ class oClient:
     
     def monitor_points_of_presence(self):
         while True:
-            self.evaluate_points_of_presence()
+            #self.evaluate_points_of_presence()
+            self.evaluate_points_of_presence_parallel()
             time.sleep(MONITOR_INTERVAL)
 
     def start(self):
         self.get_points_of_presence()
-        threading.Thread(target=self.evaluate_points_of_presence_parallel, args=()).start()
+        threading.Thread(target=self.monitor_points_of_presence, args=()).start()
 
 if __name__ == "__main__":
 

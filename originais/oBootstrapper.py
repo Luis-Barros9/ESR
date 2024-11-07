@@ -17,6 +17,11 @@ neighbours = {
     'n12': ['10.0.29.2', '10.0.13.1'],
 }
 
+pops = ['10.0.27.1',
+        '10.0.26.1',
+        '10.0.24.1',
+        '10.0.14.1']
+
 # Host and port configuration
 HOST = '0.0.0.0'
 PORT = 5000
@@ -41,7 +46,8 @@ def handler(connection, address):
                 response = pickle.dumps(neighbours[node_id])
             else:
                 response = pickle.dumps({"error": "Node not found"})
-                
+        elif data.startswith("PoPs")  :
+            response = pickle.dumps(pops)
         else:
             response = pickle.dumps({"error": "Invalid command"})
         
