@@ -3,6 +3,7 @@ import threading
 import pickle
 import netifaces
 import sys
+import json
 
 PORT = 5000  # Define a single, fixed port for all oNode instances
 BOOTSTRAPPER_IP = '10.0.34.2'  # IP of the bootstrapper

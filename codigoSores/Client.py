@@ -6,7 +6,9 @@ import socket, threading, sys, traceback, os
 from RtpPacket import RtpPacket
 
 CACHE_FILE_NAME = "cache-"
-CACHE_FILE_EXT = ".jpg"
+
+PORT = 5000  # Define a single, fixed port for all oNode instances
+BOOTSTRAPPER_IP = '10.0.34.2'  # IP of the bootstrapper
 
 class Client:
 	INIT = 0
@@ -32,9 +34,50 @@ class Client:
 		self.sessionId = 0
 		self.requestSent = -1
 		self.teardownAcked = 0
+		self.pointsOfPresence = {}
+		self.getPointsOfPresence()
 		self.connectToServer()
+		# TODO alterar funções de envio e receção de mensagens para comunicar com o ponto de presença escolhido
 		self.frameNbr = 0
+	
+	def getPointsOfPresence(self):
+		# Conectar ao servidor através de UDP para obter a lista dos pontos de presença
+		# Escolher dos diferentes pontos de presença, a qual ligar
+		# Guardar o endereço e a porta do ponto de presença escolhido
+		# Fechar a ligação ao servido
+		client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		try:
+			# Conectar ao servidor
+			client_socket.connect((self.serverAddr,self.serverPort))
+			print(f"Conectado ao servidor {self.serverAddr} na porta {self.serverPort}")
+			
+			# Enviar solicitação para obter a lista de pontos de presença
+			request_message = "GET_POINTS_OF_PRESENCE"
+			client_socket.sendall(request_message.encode('utf-8'))
+			
+			# Receber a lista de pontos de presença do servidor (ips)
+			response = client_socket.recv(4096)  # Aumentar o buffer se necessário
+			points_of_presence = response.decode('utf-8').split(';')  # Supondo que os pontos são separados por ';'
+			print(f"Pontos de presença recebidos: {points_of_presence}")
+			
+			for p in points_of_presence:
+				self.pointsOfPresence[p] = None  # Inicializar o contador de utilização de cada ponto de presença		
+		except socket.error as e:
+			print(f"Erro de socket: {e}")
 		
+		finally:
+			# Fechar a conexão
+			client_socket.close()
+
+
+	def evaluatePointsOfPresence(self):
+		"""Função que avalia os pontos de presença e escolhe o melhor, 
+		utilizando assim métricas como o número de saltos, a latência, a largura de banda, perda ,etc."""
+
+
+		# por fim criar um socker udp com o ponto de presença escolhido ## self.rtpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		pass
+
 	def createWidgets(self):
 		"""Build GUI."""
 		# Create Setup button
@@ -147,22 +190,16 @@ class Client:
 		#-------------
 		
 		# Setup request
-		request = None
 		if requestCode == self.SETUP and self.state == self.INIT:
 			threading.Thread(target=self.recvRtspReply).start()
 			# Update RTSP sequence number.
 			# ...
-			self.rtspSeq += 1			
+			
 			# Write the RTSP request to be sent.
 			# request = ...
-			request = RtpPacket()
-			ssrc = os.urandom(4)
 			
-			# não percebi muito bem que campos passar neste encode
-			request.encode(2,0,0,0,self.rtspSeq,0,0,ssrc,b'Get Points of Presence'),
 			# Keep track of the sent request.
 			# self.requestSent = ...
-			self.requestSent = self.SETUP
 		
 		# Play request
 		elif requestCode == self.PLAY and self.state == self.READY:
@@ -175,7 +212,6 @@ class Client:
 			
 			# Keep track of the sent request.
 			# self.requestSent = ...
-			self.requestSent = self.PLAY
 		
 		# Pause request
 		elif requestCode == self.PAUSE and self.state == self.PLAYING:
@@ -188,7 +224,6 @@ class Client:
 			
 			# Keep track of the sent request.
 			# self.requestSent = ...
-			self.requestSent = self.PAUSE
 			
 		# Teardown request
 		elif requestCode == self.TEARDOWN and not self.state == self.INIT:
@@ -201,15 +236,13 @@ class Client:
 			
 			# Keep track of the sent request.
 			# self.requestSent = ...
-			self.requestSent = self.TEARDOWN
 		else:
 			return
 		
 		# Send the RTSP request using rtspSocket.
 		# ...
-		self.rtspSocket.send(request)
+		
 		print('\nData sent:\n' + request)
-
 	
 	def recvRtspReply(self):
 		"""Receive RTSP reply from the server."""
@@ -273,8 +306,6 @@ class Client:
 		
 		# Set the timeout value of the socket to 0.5sec
 		# ...
-
-		
 		
 		try:
 			# Bind the socket to the address using the RTP port given by the client user
@@ -290,4 +321,3 @@ class Client:
 			self.exitClient()
 		else: # When the user presses cancel, resume playing.
 			self.playMovie()
-

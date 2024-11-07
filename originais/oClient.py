@@ -1,10 +1,15 @@
 import socket
-import pickle
 import threading
 import time
+import subprocess
+import multiprocessing
+import re
+import json
 
 # 60 segundos 
 MONITOR_INTERVAL = 60
+NUMBER_PINGS = 10
+PING_SIZE = 128
 
 class oClient:
     def __init__(self):
@@ -23,8 +28,9 @@ class oClient:
             try:
                 message = str.encode('pop')
                 self.server_conn.send(message)
-                pop_list = self.server_conn.recv(1024)
-                self.pointsofpresence = pop_list
+                pop_list = self.server_conn.recv(1024).decode('utf-8')
+                self.pointsofpresence = json.loads(pop_list)
+                print(self.pointsofpresence)
                 print('POPs obtidos com sucesso.')
                 message = str.encode('pop_received')
                 self.server_conn.send(message)
@@ -38,21 +44,72 @@ class oClient:
     def evaluate_point(self,ponto):
         # TODO avaliar métricas como largura de banda,latência, perda, números de saltos...
         # usar pings com prai 10 vezes ou algo assim
-        return 1
+        try:
+            output = subprocess.check_output(['ping', '-c', str(NUMBER_PINGS),'-s', str(PING_SIZE), '-q',ponto]).decode('utf-8')
+                    # Extrai o tempo de resposta de cada pacote recebido
+            #print(output)
+            stats_match = re.search(r'(\d+) packets transmitted, (\d+) received(?:, \+?(\d+) duplicates)?, (\d+)% packet loss', output)
+            if stats_match:
+                transmitted_packets = int(stats_match.group(1))
+                received_packets = int(stats_match.group(2))
+                duplicate_packets = int(stats_match.group(3)) if stats_match.group(3) else 0
+                packet_loss = int(stats_match.group(4))
+            else:
+                transmitted_packets = duplicate_packets = received_packets = packet_loss = None
+            # Extrai valores de RTT min, avg, max, mdev
+            rtt_match = re.search(r'rtt min/avg/max/mdev = \d+\.\d+/(\d+\.\d+)/\d+\.\d+/(\d+\.\d+)', output)
+            if rtt_match:
+                rtt_avg = float(rtt_match.group(1))
+                rtt_mdev = float(rtt_match.group(2))
+            else:
+                rtt_avg = rtt_mdev = None
+            #Debug
+            print('POP: %s\nPacotes enviados: %d | Pacotes recebidos: %d | Perda de pacotes: %d%% | Pacotes duplicados: %d | RTT avg/mdev: %.2f/%.2f ms' %
+      (ponto, transmitted_packets, received_packets, packet_loss, duplicate_packets or 0, rtt_avg, rtt_mdev))
+
+            # Avaliar estado de rede com os dados passados
+
+            # TODO melhorar a avaliação, para tornar algo mais completo, englobando mais parametros como desvio e duplicados
+            # e mais cuidados com o packet loss
+            if packet_loss == 100:
+                return -1000
+                # valores negativos porque quanto menor o tempo, melhor a rede
+            return -(rtt_avg * 100.0) / (100.0 - packet_loss)
+
+        except subprocess.CalledProcessError:
+            print('Erro no subprocesso.')
+            return -10000
 
     def evaluate_points_of_presence(self):
         # avaliar pontos de presenca
+        # versão sequencial provavelmente vai ser apagada
         if len(self.pointsofpresence):
-            best = self.pointsofpresence[0]
-            max = self.evaluate_point(best)
 
-            # escolher o melhor ponto de presença no momento
-            for p in self.pointsofpresence[1:]:
-                rate = self.evaluate_point(p)
-                if rate > max:
-                    max = rate
-                    best = p
-            self.pop = best
+            avaliacoes = []
+            for p in self.pointsofpresence:
+                avaliacoes.append(self.evaluate_point(p))
+            best = self.pointsofpresence[avaliacoes.index(max(avaliacoes))]
+            print('O melhor ponto de presença é: %s' % best)
+            if self.pop != best:
+                print('O ponto de presença foi alterado de %s para %s' % (self.pop, best))
+                self.pop = best
+                # Executar algum tipo de alteração???
+
+    def evaluate_points_of_presence_parallel(self):
+        # avaliar pontos de presenca
+        if len(self.pointsofpresence):
+            with multiprocessing.Pool(processes=len(self.pointsofpresence)) as pool:
+                avaliacoes = pool.map(self.evaluate_point, self.pointsofpresence)
+
+            print(avaliacoes)
+            best = self.pointsofpresence[avaliacoes.index(max(avaliacoes))]
+            print('O melhor ponto de presença é: %s' % best)
+            if self.pop != best:
+                print('O ponto de presença foi alterado de %s para %s' % (self.pop, best))
+                self.pop = best
+                # Executar algum tipo de alteração???
+
+
     
     def monitor_points_of_presence(self):
         while True:
@@ -61,9 +118,10 @@ class oClient:
 
     def start(self):
         self.get_points_of_presence()
-        #threading.Thread(target=self.evaluate_points_of_presence, args=(self)).start()
+        threading.Thread(target=self.evaluate_points_of_presence_parallel, args=()).start()
 
 if __name__ == "__main__":
+
     
 
     client = oClient()
