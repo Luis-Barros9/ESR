@@ -1,7 +1,7 @@
 import socket
 import pickle
 import threading
-import time
+import subprocess
 
 class oClient:
     def __init__(self):
@@ -9,28 +9,23 @@ class oClient:
         self.pop = '' # Ponto de presença a ser usado
         self.timeout = 3 # Tempo para timeout em segundos
 
+        self.streams_list = []
+
         # RUN!!!
         self.get_points_of_presence()
         self.get_list_of_streams()
-        self.receive_video()
+        self.display_stream()
 
-    # Get points of presence from bootstrapper
+    # Get points of presence from bootstrapper - UDP
     def get_points_of_presence(self):
-
-        # Socket comunicação servidor
-        bootstrapper_conn = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        bootstrapper_conn.settimeout(self.timeout)
-        bootstrapper_conn.connect(('10.0.0.10', 6000))
-
+        bs_conn = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        bs_conn.settimeout(self.timeout)
         while True:
             try:
-                message = str.encode('pop')
-                bootstrapper_conn.send(message)
-                pop_list = bootstrapper_conn.recv(1024)
-                self.pops = pop_list
+                message = str.encode('POPS')
+                bs_conn.sendto(message, ('10.0.0.10', 6000))
+                self.pops = bs_conn.recv(1024)
                 print('POPs obtidos com sucesso.')
-                message = str.encode('pop_received')
-                bootstrapper_conn.send(message)
                 break
             except socket.timeout:
                 print('Timeout - Reenvio de pedido POPs.')
@@ -38,13 +33,47 @@ class oClient:
                 print('Servidor não está a atender pedidos. Tente novamente mais tarde. :D')
                 break
 
-    # Get list of streams available to play (from POP)
+    # Get list of streams available to play (from POP) - UDP
     def get_list_of_streams(self):
-        pass
+        pop_conn = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        pop_conn.settimeout(self.timeout)
+        while True:
+            try:
+                message = str.encode('STREAMS')
+                pop_conn.sendto(message, (self.pop, 6000))
+                self.streams_list = pop_conn.recv(1024)
+                print('Lista de streams obtida com sucesso.')
+                break
+            except socket.timeout:
+                print('Timeout - Reenvio de pedido de lista de streams.')
+                continue
+            except:
+                print('Servidor não está a atender pedidos. Tente novamente mais tarde. :D')
+                break
 
-    # Receive video from server (POP)
-    def receive_video(self):
-        pass
+    # Display video from server (POP) - UDP
+    def display_stream(self):
+        BUFFERSIZE = 2048
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(('0.0.0.0', 6000))
+
+        ffplay = subprocess.Popen(['ffplay', '-i', 'pipe:0', '-f', 'mjpeg'], stdin=subprocess.PIPE)
+
+        try:
+            while True:
+                data, _ = sock.recvfrom(BUFFERSIZE)
+
+                if not data:
+                    print(f"[INFO] Transmissão concluída.")
+                    break
+
+                ffplay.stdin.write(data)
+                ffplay.stdin.flush()
+        finally:
+            sock.close()
+            ffplay.stdin.close()
+            ffplay.wait()
 
 if __name__ == "__main__":
     client = oClient()

@@ -1,0 +1,2 @@
+PROBLEMA 1 - Stream trava e/ou tem falhas
+PROBLEMA 2 - Stream não chega ao fim
