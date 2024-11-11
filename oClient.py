@@ -59,7 +59,7 @@ class oClient:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(('0.0.0.0', 6000))
 
-        message = str.encode('STREAM XPTO')#str.encode('STREAM movie.Mjpeg')
+        message = str.encode('STREAM movie.Mjpeg')
         sock.sendto(message, ('10.0.0.10', 6000))
 
         ffplay = subprocess.Popen(
