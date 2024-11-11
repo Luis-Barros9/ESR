@@ -12,30 +12,31 @@ class oClient:
         self.streams_list = []
 
         # RUN!!!
-        self.get_points_of_presence()
-        self.get_list_of_streams()
+        #self.get_points_of_presence()
+        #self.get_list_of_streams()
         self.display_stream()
 
     # Get points of presence from bootstrapper - UDP
     def get_points_of_presence(self):
-        bs_conn = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        bs_conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         bs_conn.settimeout(self.timeout)
         while True:
             try:
                 message = str.encode('POPS')
-                bs_conn.sendto(message, ('10.0.0.10', 6000))
+                bs_conn.sendto(message, ('10.0.34.2', 6000))
                 self.pops = bs_conn.recv(1024)
                 print('POPs obtidos com sucesso.')
                 break
             except socket.timeout:
                 print('Timeout - Reenvio de pedido POPs.')
+                continue
             except:
-                print('Servidor não está a atender pedidos. Tente novamente mais tarde. :D')
+                print('Bootstrapper offline.')
                 break
 
     # Get list of streams available to play (from POP) - UDP
     def get_list_of_streams(self):
-        pop_conn = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        pop_conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         pop_conn.settimeout(self.timeout)
         while True:
             try:
@@ -58,7 +59,12 @@ class oClient:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(('0.0.0.0', 6000))
 
-        ffplay = subprocess.Popen(['ffplay', '-i', 'pipe:0', '-f', 'mjpeg'], stdin=subprocess.PIPE)
+        message = str.encode('STREAM XPTO')#str.encode('STREAM movie.Mjpeg')
+        sock.sendto(message, ('10.0.0.10', 6000))
+
+        ffplay = subprocess.Popen(
+            ['ffplay', '-i', 'pipe:0', '-f', 'mjpeg', '-hide_banner', ], #"-loglevel", "quiet"
+            stdin=subprocess.PIPE)
 
         try:
             while True:

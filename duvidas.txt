@@ -1,2 +1,3 @@
-PROBLEMA 1 - Stream trava e/ou tem falhas
-PROBLEMA 2 - Stream não chega ao fim
+BITRATE MUITO ALTO/BAIXO CAUSA:
+  > PROBLEMA 1 - Stream trava e/ou tem falhas
+  > PROBLEMA 2 - Stream não chega ao fim

@@ -22,7 +22,7 @@ pops = ['', '', '', '']
 class Bootstrapper:
     def __init__(self):
         # Create socket
-        bootstrapper = socket.socket()
+        bootstrapper = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         bootstrapper.bind(('0.0.0.0', 5000))
 
         print('Bootstrapper listening for connections!')
