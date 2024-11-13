@@ -17,7 +17,7 @@ neighbours = {
 }
 
 # List of points of presence
-pops = ['', '', '', '']
+pops = ['10.0.27.1', '10.0.26.1', '10.0.24.1', '10.0.14.1']
 
 class Bootstrapper:
     def __init__(self):
@@ -38,19 +38,23 @@ class Bootstrapper:
     def handler(self, connection, address):
         ip = str(address[0])
         print(f"[INFO] {ip} connection started.")
+
         data = connection.recv(1024).decode('utf-8')
+
         if data.startswith('NEIGHBOURS'):
+
+            # Return node neighbours
             _, node_id = data.split()
-            if node_id in neighbours:
-                response = pickle.dumps(neighbours[node_id])
-            else:
-                response = pickle.dumps({"error": "Invalid node id"})
+            response = pickle.dumps(neighbours[node_id])
+
         elif data.startswith('POPS'):
+
+            # Return POPs list
             response = pickle.dumps(pops)
-        else:
-            response = pickle.dumps({"error": "Invalid command"})
+
         connection.send(response)
-        print(f"[INFO] Neighbours sent for {node_id}.")
+        print(f"[INFO] Response sent to {ip}.")
+
         connection.close()
         print(f"[INFO] {ip} connection closed.")
 

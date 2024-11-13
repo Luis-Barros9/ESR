@@ -1,4 +1,0 @@
-
-2 - Conexão cliente/servidor para transmissão de video real-time - FEITO*************
-    2.1 - Criar um classe Packet para uniformizar o pacote transmitido entre os diversos dispositivos da rede
-3 - Construir arvore de distribuição pelo servidor

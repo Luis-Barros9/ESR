@@ -1,8 +1,10 @@
 class oPacket:
-    def __init__(self):
-        self.stream_id = 0
+    def __init__(self, stream_id, type, data):
+        self.stream_id = stream_id
+        self.type = type
+        self.data = data
         pass
-    
+
     def encode(self):
         pass
     

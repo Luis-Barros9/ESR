@@ -11,6 +11,7 @@ class Server:
         self.videos = []
 
         # List of streams
+        # Key:stream & Value:list of clients
         self.streams = {}
 
         # Create server socket
@@ -35,14 +36,16 @@ class Server:
         if msg.startswith('LISTSTREAMS'):
 
             # Devolve a lista de streams disponiveis
-            response = '\n'.join(self.streams.keys())
+            response = '\n'.join(self.streams.keys()).encode()
             self.server.sendto(response, address)
 
         elif msg.startswith('STREAM'):
 
             # Adiciona o cliente à lista de clientes de uma stream requisitada
+            client = str(address[0])
             _, stream_id = msg.split()
-            self.streams[stream_id].append(str(address[0]))
+            if client not in self.streams[stream_id]:
+                self.streams[stream_id].append(client)
 
     # Make list of videos available to stream
     def make_list_of_videos(self):

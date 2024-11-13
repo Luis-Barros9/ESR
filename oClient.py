@@ -6,33 +6,32 @@ import subprocess
 class oClient:
     def __init__(self):
         self.pops = [] # Lista pontos de presença
-        self.pop = '' # Ponto de presença a ser usado
+        self.pop = '10.0.0.10' # Ponto de presença a ser usado
         self.timeout = 3 # Tempo para timeout em segundos
 
         self.streams_list = []
 
         # RUN!!!
-        #self.get_points_of_presence()
-        #self.get_list_of_streams()
+        self.get_points_of_presence()
+        self.get_list_of_streams()
         self.display_stream()
 
-    # Get points of presence from bootstrapper - UDP
+    # Get points of presence from bootstrapper - TCP
     def get_points_of_presence(self):
-        bs_conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        bs_conn.settimeout(self.timeout)
-        while True:
-            try:
-                message = str.encode('POPS')
-                bs_conn.sendto(message, ('10.0.34.2', 6000))
-                self.pops = bs_conn.recv(1024)
-                print('POPs obtidos com sucesso.')
-                break
-            except socket.timeout:
-                print('Timeout - Reenvio de pedido POPs.')
-                continue
-            except:
-                print('Bootstrapper offline.')
-                break
+        bs_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        bs_conn = socket.connect(('10.0.34.2', 5000))
+        try:
+            # Envia mensagem
+            message = str.encode('POPS')
+            bs_conn.send(message)
+            
+            # Recebe lista de POPs
+            self.pops = bs_conn.recv(1024)
+            print('POPs obtidos com sucesso.')
+        except:
+            print('Bootstrapper offline.')
+        finally:
+            bs_conn.close()
 
     # Get list of streams available to play (from POP) - UDP
     def get_list_of_streams(self):
@@ -40,10 +39,10 @@ class oClient:
         pop_conn.settimeout(self.timeout)
         while True:
             try:
-                message = str.encode('STREAMS')
+                message = str.encode('LISTSTREAMS')
                 pop_conn.sendto(message, (self.pop, 6000))
-                self.streams_list = pop_conn.recv(1024)
-                print('Lista de streams obtida com sucesso.')
+                self.streams_list = pop_conn.recv(1024).decode()
+                print(f'[INFO] Lista de streams obtida com sucesso. STREAMS: {self.streams_list}')
                 break
             except socket.timeout:
                 print('Timeout - Reenvio de pedido de lista de streams.')
