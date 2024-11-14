@@ -20,8 +20,10 @@ class Node:
     # Get neighbours from bootstrapper - TCP
     def get_neighbours_from_bootstrapper(self):
         bs_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        bs_conn = socket.connect(('10.0.34.2', 5000))
         try:
+            # Conexão com boostrapper
+            bs_conn.connect(('10.0.34.2', 5000))
+
             # Envia mensagem
             message = str.encode(f'NEIGHBOURS {self.name}')
             bs_conn.send(message)
