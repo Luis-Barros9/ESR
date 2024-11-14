@@ -43,7 +43,6 @@ class oClient:
             except Exception as e:
                 print(f"[ERROR] Failed to retrieve PoPs from bootstrapper: {e}")
 
-    '''
     def evaluate_point(self,ponto): 
         # criar protocolo para avaliação entrre cliente-pop -> pop deve entre outros parametros enviar dados sobre a sua conexão ao servidor
         # TODO avaliar métricas como largura de banda,latência, perda, números de saltos...
@@ -83,36 +82,7 @@ class oClient:
         except subprocess.CalledProcessError:
             print('Erro no subprocesso.')
             return -10000
-        ''' 
-    # ter em conta que podemos comunicar com vários pops ao mesmo tempo, ou seja usar portas diferentes para avaliação, mas ter cuidado
-    def evaluate_point(self, ponto, porta):
-        try:
-            # Cria um socket UDP
 
-            # Fazer um for para obter uma avaliação mais precisa do ponto específico
-            udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            
-            # Associa o socket à porta local
-            udp_socket.bind(('', porta))
-            
-            # Define o endereço do ponto (IP e porta)
-            ponto_address = (ponto, POP_PORT)
-            
-            # Envia uma mensagem de teste para o ponto
-            udp_socket.sendto("Evaluate ".encode('utf-8'), ponto_address)
-            
-            # Recebe a resposta do ponto
-            response, addr = udp_socket.recvfrom(4096)
-            #o nodo deve responder com métricas de avaliação do ponto e um timestamp de envio de mensagem
-            #Provavelmente acrescentar 'lixo' para simular o tamanho da mensagem ser igual ao tamanho de um pacote de streaming
-
-            # Fecha o socket
-            udp_socket.close()
-            
-            return 1
-        except Exception as e:
-            print(f'Erro ao estabelecer conexão UDP com o ponto: {e}')
-            return -1
 
 
 

@@ -28,7 +28,7 @@ class ONode:
         # Request neighbors from bootstrapper at startup
         self.get_neighbors_from_bootstrapper(node_name)
 
-    def get_neighbors_from_bootstrapper(self, node_names):
+    def get_neighbors_from_bootstrapper(self, node_name):
         # Connect to bootstrapper to request neighbors for each IP
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as bootstrapper_socket:
             try:
