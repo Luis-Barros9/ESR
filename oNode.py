@@ -3,9 +3,9 @@ import pickle
 import sys
 
 class Node:
-    def __init__(self):
+    def __init__(self, name):
         # Node name
-        self.name = ''
+        self.name = name
         
         # List of neighbours
         self.neighbours = []
@@ -16,10 +16,6 @@ class Node:
 
         # RUN!!!
         self.get_neighbours_from_bootstrapper()
-
-    # Define node name
-    def set_node_name(self, name):
-        self.name = name
 
     # Get neighbours from bootstrapper - TCP
     def get_neighbours_from_bootstrapper(self):
@@ -44,5 +40,4 @@ if __name__ == "__main__":
         print("Usage: oNode.py <node_name>")
         sys.exit(1)
 
-    node = Node()
-    node.set_node_name(sys.argv[1])
+    node = Node(sys.argv[1])
