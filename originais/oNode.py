@@ -4,6 +4,8 @@ import pickle
 import netifaces
 import sys
 import json
+import time
+from oNodePacket import Packet
 
 PORT = 5000  # Define a single, fixed port for all oNode instances
 BOOTSTRAPPER_IP = '10.0.34.2'  # IP of the bootstrapper
@@ -47,14 +49,33 @@ class ONode:
             except Exception as e:
                 print(f"[ERROR] Failed to retrieve neighbors from bootstrapper: {e}")
 
-    def handle_client(self, client_socket, addr):
+
+    def state(self):
+        # TODO  alterar função para calcular estado do nó(latência até ao servidor)
+        return 1
+    
+
+    def handle_conection(self, client_socket, addr):
         print(f"[INFO] Connection established with {addr}")
         try:
             while True:
-                message = client_socket.recv(1024).decode('utf-8')
+                message = client_socket.recv(1024)
                 if not message:
                     break
-                print(f"[MESSAGE] Received from {addr}: {message}")
+                packet = Packet.decode(message)
+                if packet.type == Packet.PING:
+                    print(f"[MESSAGE] Received from {addr}: PING")
+                    data = {"timestamp": time.time(), "state": self.state()} 
+                    encoded_data = pickle.dumps(data)
+                    padding = b'\x00' * (1024 - len(encoded_data))
+                    client_socket.send(encoded_data + padding)
+                    
+                if packet.type == Packet.FLOOD:
+                    #TODO flood
+                    pass
+                if packet.type == Packet.EXIT:
+                    #TODO exit
+                    pass
         except ConnectionResetError:
             print(f"[INFO] Connection reset by {addr}")
         finally:
@@ -65,7 +86,7 @@ class ONode:
         while True:
             try:
                 client_socket, addr = self.server_socket.accept()
-                client_handler = threading.Thread(target=self.handle_client, args=(client_socket, addr))
+                client_handler = threading.Thread(target=self.handle_conection, args=(client_socket, addr))
                 client_handler.start()
             except Exception as e:
                 print(f"[ERROR] Accepting connection: {e}")

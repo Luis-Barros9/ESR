@@ -5,13 +5,15 @@ import subprocess
 import multiprocessing
 import re
 import pickle
+from oNodePacket import Packet
 
 # 60 segundos 
 MONITOR_INTERVAL = 60
 NUMBER_PINGS = 10
 PING_SIZE = 128
 BOOTSTRAPPER_IP = '10.0.34.2'  # IP of the bootstrapper
-POP_PORT = 5000
+PORT = 5000
+STREAM_SIZE = 1024 #alterar dps secalhar
 
 class oClient:
     def __init__(self):
@@ -36,13 +38,14 @@ class oClient:
                 # Receive the list of neighbors from bootstrapper
                 response = bootstrapper_socket.recv(4096)
                 pops = pickle.loads(response)
-                for n in neighbors_for_ip:
+                for n in pops:
                     self.pointsofpresence.append(n)
                 print(f"[INFO] PoPs received from bootstrapper: {pops}")
             
             except Exception as e:
                 print(f"[ERROR] Failed to retrieve PoPs from bootstrapper: {e}")
 
+    '''
     def evaluate_point(self,ponto): 
         # criar protocolo para avaliação entrre cliente-pop -> pop deve entre outros parametros enviar dados sobre a sua conexão ao servidor
         # TODO avaliar métricas como largura de banda,latência, perda, números de saltos...
@@ -82,7 +85,49 @@ class oClient:
         except subprocess.CalledProcessError:
             print('Erro no subprocesso.')
             return -10000
+    '''
 
+    def evaluate_point(self,ponto):
+        # criar conexão UDP com o PoP
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.settimeout(2)#timeout de 2 segundos
+                print(f'Avaliando PoP {ponto}')
+                s.connect((ponto, PORT))
+                # Enviar mensagem de teste
+                message = Packet(Packet.PING)
+                falhas =0
+                valores = []
+                for _ in range(NUMBER_PINGS):
+                    #start = time.time()
+                    s.send(message.encode())
+                    data = s.recv(STREAM_SIZE)
+
+                    if data:
+                        ## falta cuidado com duplicados
+                        info = pickle.loads(data)
+                        latenciaPOP = info['state'] #Estado da rede CDN entre servidor->PoP
+                        end = time.time()
+                        volta = end-info.timestamp
+                        valores.append(volta + latenciaPOP)
+                    else:
+                        falhas+=1
+                        print("Packet loss")
+                
+                if valores:
+                    media = sum(valores)/len(valores)
+                    for _ in falhas:
+                        valores.append(10*media) # penalizar falhas
+                    media_pen = sum(valores)/(len(valores))
+                    print(f'Média de RTT para {ponto}: {media_pen}')
+                    return media_pen
+                else:# nenhum pacote recebido
+                    return 10000
+
+                
+        except Exception as e:
+            print(f'Erro ao avaliar PoP {ponto}: {e}')
+            return 10000
 
 
 
@@ -108,7 +153,7 @@ class oClient:
                 avaliacoes = pool.map(self.evaluate_point, self.pointsofpresence)
 
             print(avaliacoes)
-            best = self.pointsofpresence[avaliacoes.index(max(avaliacoes))]
+            best = self.pointsofpresence[avaliacoes.index(min(avaliacoes))]
             print('O melhor ponto de presença é: %s' % best)
             if self.pop != best:
                 print('O ponto de presença foi alterado de %s para %s' % (self.pop, best))
