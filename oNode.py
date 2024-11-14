@@ -32,7 +32,7 @@ class Node:
 
             # Recebe lista de vizinhos
             self.pops = pickle.loads(bs_conn.recv(2048))
-            print('POPs obtidos com sucesso.')
+            print('Vizinhos obtidos com sucesso.')
         except:
             print('Bootstrapper offline.')
         finally:
