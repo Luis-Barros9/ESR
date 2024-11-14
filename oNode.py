@@ -22,7 +22,7 @@ class Node:
         self.name = name
 
     # Get neighbours from bootstrapper - TCP
-    def get_neighbours_from_bootstrarpper(self):
+    def get_neighbours_from_bootstrapper(self):
         bs_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         bs_conn = socket.connect(('10.0.34.2', 5000))
         try:
