@@ -19,8 +19,10 @@ class oClient:
     # Get points of presence from bootstrapper - TCP
     def get_points_of_presence(self):
         bs_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        bs_conn = socket.connect(('10.0.34.2', 5000))
         try:
+            # Conexão com bootstrapper
+            bs_conn.connect(('10.0.34.2', 5000))
+
             # Envia mensagem
             message = str.encode('POPS')
             bs_conn.send(message)
