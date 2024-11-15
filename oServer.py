@@ -2,11 +2,17 @@ import os
 import socket
 import threading
 import pickle
-from oPacket import oPacket
 import time
+from oPacket import oPacket
+
+# List of points of presence
+pops = ['10.0.27.1', '10.0.26.1', '10.0.24.1', '10.0.14.1']
 
 class Server:
     def __init__(self):
+        # List of neighbours
+        self.neighbours = []
+
         # List of videos available
         self.videos = []
 
@@ -19,6 +25,8 @@ class Server:
         self.server.bind(('0.0.0.0', 6000))
 
         # RUN!!!
+        self.get_neighbours_from_bootstrapper()
+        threading.Thread(target=self.build_distribution_tree).start()
         self.make_list_of_videos()
         self.stream_videos()
 
@@ -26,7 +34,7 @@ class Server:
         try:
             while True:
                 data, addr = self.server.recvfrom(1024)
-                threading.Thread(target= self.handler, args=(data, addr)).start()
+                threading.Thread(target=self.handler, args=(data, addr)).start()
         finally:
             self.server.close()
 
@@ -46,6 +54,40 @@ class Server:
             _, stream_id = msg.split()
             if client not in self.streams[stream_id]:
                 self.streams[stream_id].append(client)
+
+        elif msg.startswith('POPS'):
+
+            # Devolve a lista de pops ao cliente
+            response = pickle.dumps(pops)
+            self.server.sendto(response, address)
+
+    # Get neighbours from bootstrapper - TCP
+    def get_neighbours_from_bootstrapper(self):
+        bs_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            # Conexão com boostrapper
+            bs_conn.connect(('10.0.34.2', 5000))
+
+            # Envia mensagem
+            message = str.encode(f'NEIGHBOURS server')
+            bs_conn.send(message)
+
+            # Recebe lista de vizinhos
+            self.pops = pickle.loads(bs_conn.recv(2048))
+            print('Vizinhos obtidos com sucesso.')
+        except:
+            print('Bootstrapper offline.')
+        finally:
+            bs_conn.close()
+
+    # Build distribution tree - UDP
+    # every 10 minutes
+    def build_distribution_tree(self):
+        while(True):
+            for neighbour in self.neighbours:
+                message = str.encode('BUILDTREE')
+                self.server.send(message, (neighbour, 6000))
+            time.sleep(600)
 
     # Make list of videos available to stream
     def make_list_of_videos(self):
@@ -74,11 +116,12 @@ class Server:
 
             if not data:
                 video_file.seek(0)
+                time.sleep(interval) # TESTE - atirar caso não resolva problema de streaming
                 continue
 
             for client in self.streams[video]:
-                self.server.sendto(data, (client, 6000))
-                
+                self.server.sendto(data, (client, 7000))
+
             time.sleep(interval)
 
 if __name__ == "__main__":

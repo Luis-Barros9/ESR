@@ -4,6 +4,7 @@ import threading
 
 # Map with neighbours
 neighbours = {
+    'server' : ['', '', ''],
     'n3': [ '10.0.5.2', '10.0.3.2',  '10.0.4.2'],
     'n4': ['10.0.18.2', '10.0.2.1'],
     'n5': [ '10.0.5.1', '10.0.7.2'],
@@ -15,9 +16,6 @@ neighbours = {
     'n11': ['10.0.12.1', '10.0.9.1',  '10.0.26.2','10.0.24.2'],
     'n12': ['10.0.10.1', '10.0.14.2']
 }
-
-# List of points of presence
-pops = ['10.0.27.1', '10.0.26.1', '10.0.24.1', '10.0.14.1']
 
 class Bootstrapper:
     def __init__(self):
@@ -46,11 +44,6 @@ class Bootstrapper:
             # Return node neighbours
             _, node_id = data.split()
             response = pickle.dumps(neighbours[node_id])
-
-        elif data.startswith('POPS'):
-
-            # Return POPs list
-            response = pickle.dumps(pops)
 
         connection.send(response)
         print(f"[INFO] Response sent to {ip}.")

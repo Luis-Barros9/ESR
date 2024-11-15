@@ -1,6 +1,5 @@
 import socket
 import pickle
-import threading
 import subprocess
 
 class oClient:
@@ -14,26 +13,23 @@ class oClient:
         # RUN!!!
         self.get_points_of_presence()
         self.get_list_of_streams()
-        self.display_stream()
+        self.display_stream('movie.Mjpeg') # TODO Fazer menu para escolher a stream
 
-    # Get points of presence from bootstrapper - TCP
+    # Get points of presence from server - UDP
     def get_points_of_presence(self):
-        bs_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            # Conexão com bootstrapper
-            bs_conn.connect(('10.0.34.2', 5000))
-
             # Envia mensagem
             message = str.encode('POPS')
-            bs_conn.send(message)
-            
+            server_conn.send(message,  ('10.0.0.10', 6000))
+
             # Recebe lista de POPs
-            self.pops = bs_conn.recv(1024)
+            self.pops = pickle.dumps(server_conn.recv(2048))
             print('POPs obtidos com sucesso.')
         except:
-            print('Bootstrapper offline.')
+            print('Server offline.')
         finally:
-            bs_conn.close()
+            server_conn.close()
 
     # Get list of streams available to play (from POP) - UDP
     def get_list_of_streams(self):
@@ -54,14 +50,14 @@ class oClient:
                 break
 
     # Display video from server (POP) - UDP
-    def display_stream(self):
+    def display_stream(self, stream):
         BUFFERSIZE = 2048
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(('0.0.0.0', 6000))
+        sock.bind(('0.0.0.0', 7000))
 
-        message = str.encode('STREAM movie.Mjpeg')
-        sock.sendto(message, ('10.0.0.10', 6000))
+        message = str.encode(f'STREAM {stream}')
+        sock.sendto(message, (self.pop, 6000))
 
         ffplay = subprocess.Popen(
             ['ffplay', '-i', 'pipe:0', '-f', 'mjpeg', '-hide_banner', ], #"-loglevel", "quiet"
