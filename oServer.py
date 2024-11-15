@@ -116,7 +116,7 @@ class Server:
 
             if not data:
                 video_file.seek(0)
-                time.sleep(interval) # TESTE - atirar caso não resolva problema de streaming
+                time.sleep(interval) # TESTE - a tirar caso não resolva problema de streaming
                 continue
 
             for client in self.streams[video]:
