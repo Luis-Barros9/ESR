@@ -1,9 +1,8 @@
 class oPacket:
-    def __init__(self, stream_id, type, data):
-        self.stream_id = stream_id
-        self.type = type
-        self.data = data
-        pass
+    def __init__(self):
+        self.stream_id = 0
+        self.type = ''
+        self.data = ''
 
     def encode(self):
         pass
