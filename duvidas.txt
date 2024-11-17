@@ -1,7 +1,1 @@
-1. O cliente também pode comunciar com o boostrapper em TCP como os nodos? Motivo: é apenas para arranque e nada mais
-2. ffplay não reproduz mp4?
-3. É suposto ou preciso fazer CBR?
-4. Problema: BITRATE MUITO ALTO/BAIXO CAUSA:
-  > PROBLEMA 1 - Stream trava e/ou tem falhas
-  > PROBLEMA 2 - Stream não chega ao fim
-5. É suposto usarmos RTP ou um sistema de pacotes customizado para streaming?
+1. Há algum problema se os nodos vizinhos do servidor souberem que é o servidor?

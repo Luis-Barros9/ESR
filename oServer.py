@@ -3,7 +3,6 @@ import socket
 import threading
 import pickle
 import time
-from oPacket import oPacket
 
 # List of points of presence
 pops = ['10.0.27.1', '10.0.26.1', '10.0.24.1', '10.0.14.1']
@@ -61,32 +60,19 @@ class Server:
             response = pickle.dumps(pops)
             self.server.sendto(response, address)
 
-    # Get neighbours from bootstrapper - TCP
-    def get_neighbours_from_bootstrapper(self):
-        bs_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            # Conexão com boostrapper
-            bs_conn.connect(('10.0.34.2', 5000))
+        elif msg.startswith('PARENT'):
 
-            # Envia mensagem
-            message = str.encode(f'NEIGHBOURS server')
-            bs_conn.send(message)
-
-            # Recebe lista de vizinhos
-            self.pops = pickle.loads(bs_conn.recv(2048))
-            print('Vizinhos obtidos com sucesso.')
-        except:
-            print('Bootstrapper offline.')
-        finally:
-            bs_conn.close()
+            # Devolve o IP do nodo pai - Neste caso devolve o próprio servidor
+            response = 'SERVER'.encode()
+            self.server.sendto(response, address)
 
     # Build distribution tree - UDP
     # every 10 minutes
     def build_distribution_tree(self):
         while(True):
             for neighbour in self.neighbours:
-                message = str.encode('BUILDTREE')
-                self.server.send(message, (neighbour, 6000))
+                message = str.encode(f'BUILDTREE:{time.time()}:0:0') # . : horario : latência : saltos
+                self.server.sendto(message, (neighbour, 6000))
             time.sleep(600)
 
     # Make list of videos available to stream
@@ -111,18 +97,44 @@ class Server:
         BITRATE = 2_000_000
         interval = BUFFERSIZE * 8 / BITRATE # CBR
         video_file = open('./videos/' + video, 'rb')
+        _, video_type = video.split('.')
         while True:
-            data = video_file.read(BUFFERSIZE)
+            video_data = video_file.read(BUFFERSIZE)
 
-            if not data:
+            if not video_data:
                 video_file.seek(0)
                 time.sleep(interval) # TESTE - tirar caso não resolva problema de streaming
                 continue
 
+            packet = {
+                'id': video,
+                'type': video_type,
+                'data': video_data
+            }
+
             for client in self.streams[video]:
-                self.server.sendto(data, (client, 7000))
+                self.server.sendto(pickle.dumps(packet), (client, 7000))
 
             time.sleep(interval)
+
+    # Get neighbours from bootstrapper - TCP
+    def get_neighbours_from_bootstrapper(self):
+        bs_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            # Conexão com boostrapper
+            bs_conn.connect(('10.0.34.2', 5000))
+
+            # Envia mensagem
+            message = str.encode(f'NEIGHBOURS server')
+            bs_conn.send(message)
+
+            # Recebe lista de vizinhos
+            self.neighbours = pickle.loads(bs_conn.recv(2048))
+            print('Vizinhos obtidos com sucesso.')
+        except:
+            print('Bootstrapper offline.')
+        finally:
+            bs_conn.close()
 
 if __name__ == "__main__":
     server = Server()

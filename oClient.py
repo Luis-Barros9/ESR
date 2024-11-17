@@ -5,7 +5,7 @@ import subprocess
 class oClient:
     def __init__(self):
         self.pops = [] # Lista pontos de presença
-        self.pop = '10.0.0.10' # Ponto de presença a ser usado
+        self.pop = '10.0.27.1' # Ponto de presença a ser usado
         self.timeout = 3 # Tempo para timeout em segundos
 
         self.streams_list = []
