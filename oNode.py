@@ -30,6 +30,7 @@ class Node:
 
         # RUN!!!
         self.get_neighbours_from_bootstrapper()
+        threading.Thread(target=self.keep_alive).start()
         threading.Thread(target=self.passthrough_streams).start()
 
         print('[INFO] Node running.')
@@ -69,11 +70,31 @@ class Node:
 
             self.streams[stream_id].append(client)
 
+        elif msg.startswith('NOSTREAM'):
+
+            # Remove o cliente da lista de clientes de uma stream
+            client = str(address[0])
+            _, stream_id = msg.split()
+            if stream_id in self.streams:
+                self.streams[stream_id].remove(client)
+                self.server.sendto(msg.encode('utf-8'), (self.flow_parent, 6000))
+
+        elif msg.startswith('PARENT'):
+
+            # Devolve o IP do nodo pai
+            response = self.flow_parent.encode()
+            self.server.sendto(response, address)
+
         elif msg.startswith('LISTSTREAMS'):
 
             # Devolve a lista de streams disponiveis
             response = self.streams_list
             self.server.sendto(response.encode(), address)
+
+        elif msg.startswith('KEEPALIVE'):
+
+            # Sinalização do vizinho a confirmar que está vivo
+            self.neighbours[address[0]] = True
 
     # Build distribution tree - UDP
     def build_distribution_tree(self, address):
@@ -104,7 +125,10 @@ class Node:
     # Send ping to neighbours to verify if they are alive or not
     # every 60 seconds
     def keep_alive(self):
-        pass
+        while True:
+            for neighbour in self.neighbours.keys():
+                self.server.sendto('KEEPALIVE'.encode('utf-8'), (neighbour, 6000))
+            time.sleep(60)
 
     # Get list of streams available to play from flow parent - UDP
     def get_list_of_streams(self):
@@ -142,7 +166,7 @@ class Node:
             # Recebe lista de vizinhos
             neighbours = pickle.loads(bs_conn.recv(2048))
             for neighbour in neighbours:
-                self.neighbours[neighbour] = True # Guarda como offline
+                self.neighbours[neighbour] = False # Guarda como offline
             print('Vizinhos obtidos com sucesso.')
         except:
             print('Bootstrapper offline.')
