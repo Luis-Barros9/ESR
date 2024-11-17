@@ -1,5 +1,2 @@
-1 - oCliente pedir POPs via UDP e não TCP
-2 - Mensagens trocadas pela porta 6000 e dados pela porta 7000
-3 - Camada overlay toda em UDP - Unica coisa TCP será conexão de Nodos/Servidor com Bootstrapper
-  >> Igual para todos, menor chance de cometer erros por confusão entre UDP e TCP
-4 - Quando o cliente fechar porque não quer mais receber a stream, enviar mensagem a dizer que não quer
+1 - Quando o cliente fechar porque não quer mais receber a stream, enviar mensagem a dizer que não quer
+2 - Guardar a lista de streams nos nodos ou de maneira a que o cliente tenha acesso à lista assim que queira
