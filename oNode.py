@@ -68,7 +68,8 @@ class Node:
                 self.streams[stream_id] = []
                 self.server.sendto(msg.encode('utf-8'), (self.flow_parent, 6000))
 
-            self.streams[stream_id].append(client)
+            if client not in self.streams[stream_id]:
+                self.streams[stream_id].append(client)
 
         elif msg.startswith('NOSTREAM'):
 
