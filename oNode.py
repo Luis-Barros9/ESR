@@ -53,7 +53,6 @@ class Node:
             _, t, latency, jump, streams = msg.split(':')
 
             self.streams_list = ast.literal_eval(streams)
-            print(self.streams_list)
 
             total_latency = float(latency) + time.time() - float(t)
             if total_latency < self.flow_latency or (total_latency == self.flow_latency and int(jump) + 1 <= self.jump):
@@ -102,13 +101,13 @@ class Node:
 
             # Devolve a lista de streams disponiveis
             response = self.streams_list
-            self.server.sendto(response.encode(), address)
+            self.server.sendto(pickle.dumps(response), address)
             print(Back.LIGHTBLUE_EX + f'[INFO] Stream list sended to {address[0]}.' + Style.RESET_ALL)
 
         elif msg.startswith('PING'):
 
             print(Back.LIGHTBLUE_EX + f"[INFO] Received from {address[0]}: PING" + Style.RESET_ALL)
-            msg = f'TIMESTAMP:{time.time()}'.encode()
+            msg = f'LATENCY:{self.flow_latency}'.encode()
             self.server.sendto(msg, address)
 
     # Build distribution tree - UDP
