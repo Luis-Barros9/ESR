@@ -110,18 +110,17 @@ class oClient:
 ######## MONITORIZAÇÃO DE POPS POR PARTE DO CLIENTE ########
     def monitor_points_of_presence(self):
         while True:
-            #self.evaluate_points_of_presence()
             self.evaluate_points_of_presence_parallel()
             time.sleep(60)
 
     def evaluate_points_of_presence_parallel(self):
         # avaliar pontos de presenca
-        if len(self.pointsofpresence):
-            with multiprocessing.Pool(processes=len(self.pointsofpresence)) as pool:
-                avaliacoes = pool.map(self.evaluate_point, self.pointsofpresence)
+        if len(self.pops):
+            with multiprocessing.Pool(processes=len(self.pops)) as pool:
+                avaliacoes = pool.map(self.evaluate_point, self.pops)
 
             print(avaliacoes)
-            best = self.pointsofpresence[avaliacoes.index(min(avaliacoes))]
+            best = self.pops[avaliacoes.index(min(avaliacoes))]
             print('O melhor ponto de presença é: %s' % best)
             if self.pop != best:
                 print('O ponto de presença foi alterado de %s para %s' % (self.pop, best))

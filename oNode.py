@@ -3,6 +3,7 @@ import pickle
 import sys
 import threading
 import time
+import ast
 from colorama import Back, Style
 
 class Node:
@@ -31,7 +32,7 @@ class Node:
 
         # RUN!!!
         self.get_neighbours_from_bootstrapper()
-        threading.Thread(target=self.keep_alive).start()
+        #threading.Thread(target=self.keep_alive).start()
         threading.Thread(target=self.passthrough_streams).start()
 
         print(Back.LIGHTBLUE_EX + '[INFO] Node running.')
@@ -49,7 +50,11 @@ class Node:
 
             # Save better flow and send to neighbours
             ip = address[0]
-            _, t, latency, jump = msg.split(':')
+            _, t, latency, jump, streams = msg.split(':')
+
+            self.streams_list = ast.literal_eval(streams)
+            print(self.streams_list)
+
             total_latency = float(latency) + time.time() - float(t)
             if total_latency < self.flow_latency or (total_latency == self.flow_latency and int(jump) + 1 <= self.jump):
                 self.flow_jump = int(jump) + 1
@@ -111,7 +116,7 @@ class Node:
         for neighbour in self.neighbours:
             # Check if neighbour is NOT his parent
             if not neighbour == address:
-                message = str.encode(f'BUILDTREE:{time.time()}:{self.flow_latency}:{self.flow_jump}')
+                message = str.encode(f'BUILDTREE:{time.time()}:{self.flow_latency}:{self.flow_jump}:{self.streams_list}')
                 self.server.sendto(message, (neighbour, 6000))
 
     # Retransmit received streams packets

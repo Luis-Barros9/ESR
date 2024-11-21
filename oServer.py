@@ -3,6 +3,7 @@ import socket
 import threading
 import pickle
 import time
+from colorama import Back, Style
 
 # List of points of presence
 pops = ['10.0.27.1', '10.0.26.1', '10.0.24.1', '10.0.14.1']
@@ -25,11 +26,11 @@ class Server:
 
         # RUN!!!
         self.get_neighbours_from_bootstrapper()
-        threading.Thread(target=self.build_distribution_tree).start()
         self.make_list_of_videos()
+        threading.Thread(target=self.build_distribution_tree).start()
         self.stream_videos()
 
-        print('[INFO] Server listening for requests.')
+        print(Back.LIGHTBLUE_EX + '[INFO] Server listening for requests.' + Style.RESET_ALL)
         try:
             while True:
                 data, addr = self.server.recvfrom(1024)
@@ -40,13 +41,7 @@ class Server:
     # Handler for clients
     def handler(self, data, address):
         msg = data.decode('utf-8')
-        if msg.startswith('LISTSTREAMS'):
-
-            # Devolve a lista de streams disponiveis
-            response = '\n'.join(self.streams.keys()).encode()
-            self.server.sendto(response, address)
-
-        elif msg.startswith('STREAM'):
+        if msg.startswith('STREAM'):
 
             # Adiciona o cliente à lista de clientes de uma stream requisitada
             client = str(address[0])
@@ -75,13 +70,14 @@ class Server:
             self.server.sendto(response, address)
 
     # Build distribution tree - UDP
-    # every 10 minutes
+    # every 5 minutes
     def build_distribution_tree(self):
         while(True):
+            print(Back.LIGHTBLUE_EX + '[INFO] Building distribution trees.' + Style.RESET_ALL)
             for neighbour in self.neighbours:
-                message = str.encode(f'BUILDTREE:{time.time()}:0:0') # . : horario : latência : saltos
+                message = str.encode(f'BUILDTREE:{time.time()}:0:0:{self.videos}') # . : horario : latência : saltos
                 self.server.sendto(message, (neighbour, 6000))
-            time.sleep(600)
+            time.sleep(300)
 
     # Make list of videos available to stream
     def make_list_of_videos(self):
