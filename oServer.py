@@ -54,6 +54,14 @@ class Server:
             if client not in self.streams[stream_id]:
                 self.streams[stream_id].append(client)
 
+        elif msg.startswith('NOSTREAM'):
+
+            # Remove o cliente da lista de clientes de uma stream
+            client = str(address[0])
+            _, stream_id = msg.split()
+            if stream_id in self.streams:
+                self.streams[stream_id].remove(client)
+
         elif msg.startswith('POPS'):
 
             # Devolve a lista de pops ao cliente

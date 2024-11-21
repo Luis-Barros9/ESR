@@ -1,4 +1,1 @@
-1 - Quando o cliente fechar porque não quer mais receber a stream, enviar mensagem a dizer que não quer
-2 - Guardar a lista de streams nos nodos ou de maneira a que o cliente tenha acesso à lista assim que queira
-3 - No keepalive, se apenas tiver 1 vizinho vivo, exigir o pai a esse vizinho
-4 - NOSTREAM para quando o cliente e os nodos deixam de querer receber uma determinada stream
+1 - Sistema KeepAlive para saber vizinhos vivos.

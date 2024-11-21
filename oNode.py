@@ -3,6 +3,7 @@ import pickle
 import sys
 import threading
 import time
+from colorama import Back, Style
 
 class Node:
     def __init__(self, name):
@@ -33,7 +34,7 @@ class Node:
         threading.Thread(target=self.keep_alive).start()
         threading.Thread(target=self.passthrough_streams).start()
 
-        print('[INFO] Node running.')
+        print(Back.LIGHTBLUE_EX + '[INFO] Node running.')
         try:
             while True:
                 data, addr = self.server.recvfrom(1024)
@@ -55,7 +56,7 @@ class Node:
                 self.flow_parent = ip
                 self.flow_latency = round(total_latency, 5)
                 self.build_distribution_tree(ip)
-                print(f'Arvore de distribuição construída: {self.flow_parent} - {self.flow_latency} - {self.flow_jump}')
+                print(Back.LIGHTBLUE_EX + f'[INFO] Arvore de distribuição construída: {self.flow_parent} - {self.flow_latency} - {self.flow_jump}' + Style.RESET_ALL)
 
         elif msg.startswith('STREAM'):
 
@@ -67,9 +68,11 @@ class Node:
             if stream_id not in self.streams:
                 self.streams[stream_id] = []
                 self.server.sendto(msg.encode('utf-8'), (self.flow_parent, 6000))
+                print(Back.LIGHTBLUE_EX + f'[INFO] New stream added - {stream_id}.' + Style.RESET_ALL)
 
             if client not in self.streams[stream_id]:
                 self.streams[stream_id].append(client)
+                print(Back.LIGHTBLUE_EX + f'[INFO] New client added to "{stream_id}" clients list.' + Style.RESET_ALL)
 
         elif msg.startswith('NOSTREAM'):
 
@@ -78,24 +81,30 @@ class Node:
             _, stream_id = msg.split()
             if stream_id in self.streams:
                 self.streams[stream_id].remove(client)
-                self.server.sendto(msg.encode('utf-8'), (self.flow_parent, 6000))
+                print(Back.LIGHTBLUE_EX + f'[INFO] Client removed from "{stream_id}" clients list.' + Style.RESET_ALL)
+                if self.streams[stream_id] == 0:
+                    self.server.sendto(msg.encode('utf-8'), (self.flow_parent, 6000))
+                    print(Back.LIGHTBLUE_EX + f'[INFO] Stream "{stream_id}" removed from this node.' + Style.RESET_ALL)
 
         elif msg.startswith('PARENT'):
 
             # Devolve o IP do nodo pai
             response = self.flow_parent.encode()
             self.server.sendto(response, address)
+            print(Back.LIGHTBLUE_EX + f'[INFO] Sending my parent to {address[0]}.' + Style.RESET_ALL)
 
         elif msg.startswith('LISTSTREAMS'):
 
             # Devolve a lista de streams disponiveis
             response = self.streams_list
             self.server.sendto(response.encode(), address)
+            print(Back.LIGHTBLUE_EX + f'[INFO] Stream list sended to {address[0]}.' + Style.RESET_ALL)
 
-        elif msg.startswith('KEEPALIVE'):
+        elif msg.startswith('PING'):
 
-            # Sinalização do vizinho a confirmar que está vivo
-            self.neighbours[address[0]] = True
+            print(Back.LIGHTBLUE_EX + f"[INFO] Received from {address[0]}: PING" + Style.RESET_ALL)
+            msg = f'TIMESTAMP:{time.time()}'.encode()
+            self.server.sendto(msg, address)
 
     # Build distribution tree - UDP
     def build_distribution_tree(self, address):
@@ -122,14 +131,6 @@ class Node:
         stream_id = packet['id']
         for client in self.streams[stream_id]:
             socket.sendto(data, (client, 7000))
-
-    # Send ping to neighbours to verify if they are alive or not
-    # every 60 seconds
-    def keep_alive(self):
-        while True:
-            for neighbour in self.neighbours.keys():
-                self.server.sendto('KEEPALIVE'.encode('utf-8'), (neighbour, 6000))
-            time.sleep(60)
 
     # Get list of streams available to play from flow parent - UDP
     def get_list_of_streams(self):
