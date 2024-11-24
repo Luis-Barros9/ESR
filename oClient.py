@@ -3,7 +3,6 @@ import pickle
 import threading
 import subprocess
 import time
-import multiprocessing
 from colorama import Back, Style
 
 class oClient:
@@ -20,11 +19,10 @@ class oClient:
         self.get_list_of_streams()
 
         # Escolhe uma stream da lista de streams disponiveis
-        #print('Escolha a stream:')
-        #for stream in self.streams_list:
-        #    print(stream)
-        #stream = input()
-        stream = 'movie.Mjpeg'
+        print('Escolha a stream:')
+        for stream in self.streams_list:
+            print(stream)
+        stream = input()
 
         # Display stream
         self.display_stream(stream)
@@ -87,13 +85,13 @@ class oClient:
         sock.sendto(message, (self.pop, 6000))
 
         ffplay = subprocess.Popen(
-            ['ffplay', '-i', 'pipe:0', '-f', 'mjpeg', '-hide_banner'],
+            ['ffplay', '-i', 'pipe:0', '-hide_banner'],
             stdin=subprocess.PIPE,
             stderr=subprocess.DEVNULL)
 
         try:
             while True:
-                data, _ = sock.recvfrom(2128)
+                data, _ = sock.recvfrom(2200)
 
                 packet = pickle.loads(data)
                 video = packet['data']
@@ -101,7 +99,7 @@ class oClient:
                 ffplay.stdin.write(video)
                 ffplay.stdin.flush()
         except:
-            print(Back.RED + '[FAIL] Erro a mostrar stream.' + Style.RESET_ALL)
+            print(Back.RED + f'[FAIL] Erro a mostrar stream' + Style.RESET_ALL)
         finally:
             sock.close()
             ffplay.stdin.close()

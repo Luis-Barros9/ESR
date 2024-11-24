@@ -1,5 +1,4 @@
-1. Pedir ao prof para explicar cada fase complementar
-2. Os nodos podem perguntar diretamente ao servidor a lista de streams ou só ao nodo pai?
-3. Temos de seguir a lista minima de requisitos? 
-    >> Não temos uma tabela de rotas. Apenas guardamos o nodo pai para fazer requests
-       e temos uma lista de clientes (nodos) para cada stream que passa pelo nodo
+1. Árvore de distribuição
+    >> os nodos só atualizam a árvore de receber métricas melhores MAS
+    caso não melhore, também não avisa os filhos
+    - Faz sentido fazer assim ou alertamos sempre para que atualizem a sua árvore se possível?

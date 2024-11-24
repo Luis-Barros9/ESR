@@ -6,7 +6,7 @@ import time
 from colorama import Back, Style
 
 # List of points of presence
-pops = ['10.0.27.1', '10.0.26.1', '10.0.24.1', '10.0.14.1']
+pops = ['10.0.27.1', '10.0.26.1', '10.0.14.1']
 
 class Server:
     def __init__(self):
@@ -72,11 +72,13 @@ class Server:
     # Build distribution tree - UDP
     # every 5 minutes
     def build_distribution_tree(self):
+        current_flood = 1
         while(True):
             print(Back.LIGHTBLUE_EX + '[INFO] Building distribution trees.' + Style.RESET_ALL)
             for neighbour in self.neighbours:
-                message = str.encode(f'BUILDTREE:{time.time()}:0:0:{self.videos}') # . : horario : latência : saltos
+                message = str.encode(f'BUILDTREE:{current_flood}:{time.time()}:0:0:{self.videos}') # . : horario : latência : saltos
                 self.server.sendto(message, (neighbour, 6000))
+            current_flood += 1
             time.sleep(300)
 
     # Make list of videos available to stream
@@ -101,7 +103,6 @@ class Server:
         BITRATE = 2_000_000
         interval = BUFFERSIZE * 8 / BITRATE # CBR
         video_file = open('./videos/' + video, 'rb')
-        _, video_type = video.split('.')
         while True:
             video_data = video_file.read(BUFFERSIZE)
 
@@ -112,7 +113,6 @@ class Server:
 
             packet = {
                 'id': video,
-                'type': video_type,
                 'data': video_data
             }
 

@@ -1,2 +1,3 @@
 1 - Sistema KeepAlive para saber vizinhos vivos.
 2 - Pedir pai
+3 - Caso mude o pai na arvore de distribuição, exigir as streams que necessita

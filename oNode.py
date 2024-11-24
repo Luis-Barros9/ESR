@@ -17,6 +17,7 @@ class Node:
         self.neighbours = {}
 
         # Distribution Tree Information
+        self.flow_current_flood = 0
         self.flow_latency = 999
         self.flow_jump = 999
         self.flow_parent = ''
@@ -50,17 +51,17 @@ class Node:
 
             # Save better flow and send to neighbours
             ip = address[0]
-            _, t, latency, jump, streams = msg.split(':')
+            _, current_flood, t, latency, jump, streams = msg.split(':')
 
             self.streams_list = ast.literal_eval(streams)
 
             total_latency = float(latency) + time.time() - float(t)
-            if total_latency < self.flow_latency or (total_latency == self.flow_latency and int(jump) + 1 <= self.jump):
+            if total_latency < self.flow_latency or (total_latency == self.flow_latency and int(jump) + 1 <= self.jump) or current_flood > self.flow_current_flood:
                 self.flow_jump = int(jump) + 1
                 self.flow_parent = ip
                 self.flow_latency = round(total_latency, 5)
-                self.build_distribution_tree(ip)
                 print(Back.LIGHTBLUE_EX + f'[INFO] Arvore de distribuição construída: {self.flow_parent} - {self.flow_latency} - {self.flow_jump}' + Style.RESET_ALL)
+            self.build_distribution_tree(ip)
 
         elif msg.startswith('STREAM'):
 
@@ -115,7 +116,7 @@ class Node:
         for neighbour in self.neighbours:
             # Check if neighbour is NOT his parent
             if not neighbour == address:
-                message = str.encode(f'BUILDTREE:{time.time()}:{self.flow_latency}:{self.flow_jump}:{self.streams_list}')
+                message = str.encode(f'BUILDTREE:{self.flow_current_flood}:{time.time()}:{self.flow_latency}:{self.flow_jump}:{self.streams_list}')
                 self.server.sendto(message, (neighbour, 6000))
 
     # Retransmit received streams packets
@@ -124,7 +125,7 @@ class Node:
         streams.bind(('0.0.0.0', 7000))
         try:
             while True:
-                data, addr = streams.recvfrom(2128)
+                data, addr = streams.recvfrom(2200)
                 self.send_packet(streams, data)
         finally:
             self.server.close()
