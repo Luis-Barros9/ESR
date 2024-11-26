@@ -55,6 +55,8 @@ class Node:
 
             self.streams_list = ast.literal_eval(streams)
 
+            current_parent = self.flow_parent
+
             total_latency = float(latency) + time.time() - float(t)
             if total_latency < self.flow_latency or (total_latency == self.flow_latency and int(jump) + 1 <= self.jump) or current_flood > self.flow_current_flood:
                 self.flow_jump = int(jump) + 1
@@ -62,6 +64,15 @@ class Node:
                 self.flow_latency = round(total_latency, 5)
                 print(Back.LIGHTBLUE_EX + f'[INFO] Arvore de distribuição construída: {self.flow_parent} - {self.flow_latency} - {self.flow_jump}' + Style.RESET_ALL)
             self.build_distribution_tree(ip)
+
+            if not current_parent == self.flow_parent:
+                # Cancela as streams vindas do pai :')
+                for stream in self.streams:
+                    self.server.sendto(f'NOSTREAM {stream}'.encode(), (current_parent, 6000))
+
+                # Pede as streams necessárias ao novo pai :)
+                for stream in self.streams:
+                    self.server.sendto(f'STREAM {stream}'.encode(), (current_parent, 6000))
 
         elif msg.startswith('STREAM'):
 

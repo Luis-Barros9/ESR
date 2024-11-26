@@ -119,8 +119,7 @@ class oClient:
             sock.close()
             ffplay.stdin.close()
             ffplay.wait()
-            message = str.encode('NOSTREAM')
-            sock.sendto(message, (self.pop, 6000))
+            self.cancel_stream()
 
 ######## MONITORIZAÇÃO DE POPS POR PARTE DO CLIENTE ########
     def monitor_points_of_presence(self):
@@ -146,13 +145,17 @@ class oClient:
                     continue
 
             menor = 999
+            current_pop = self.pop
             for pop in valores:
                 if valores[pop] < menor:
-                    self.cancel_stream() # Cancela stream vinda do pop atual
                     self.pop = pop
                     menor = valores[pop]
-                    self.request_stream() # Pede a stream ao novo pop
                     print(f'O ponto de presença foi alterado para {self.pop}')
+
+            if not current_pop == self.pop:
+                self.cancel_stream() # Cancela stream vinda do pop atual
+                self.request_stream() # Pede a stream ao novo pop
+
             time.sleep(60)
 
 if __name__ == "__main__":

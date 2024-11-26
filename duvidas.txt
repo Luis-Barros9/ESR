@@ -1,0 +1,3 @@
+UMA ÚNICA DÚVIDA:
+
+Por ser tudo UDP, é preciso o código ter bastante robustez em questão de falhas/erros ou podemos assumir o minimo de falhas?
