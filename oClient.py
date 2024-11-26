@@ -11,6 +11,7 @@ class oClient:
         self.pop = '' # Ponto de presença a ser usado
         self.timeout = 3 # Tempo para timeout em segundos
 
+        self.stream_choosen = ''
         self.streams_list = []
 
         # RUN!!!
@@ -22,10 +23,11 @@ class oClient:
         print('Escolha a stream:')
         for stream in self.streams_list:
             print(stream)
-        stream = input()
+        self.stream_choosen = input()
 
         # Display stream
-        self.display_stream(stream)
+        self.request_stream()
+        self.display_stream()
 
     # Get points of presence from server - UDP
     def get_points_of_presence(self):
@@ -76,13 +78,26 @@ class oClient:
                 pop_conn.close()
                 break
 
+    # Request stream - UDP
+    def request_stream(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(('0.0.0.0', 6000))
+
+        message = str.encode(f'STREAM {self.stream_choosen}')
+        sock.sendto(message, (self.pop, 6000))
+
+    # Cancel stream - UDP
+    def cancel_stream(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(('0.0.0.0', 6000))
+
+        message = str.encode(f'NOSTREAM {self.stream_choosen}')
+        sock.sendto(message, (self.pop, 6000))  
+
     # Display video from server (POP) - UDP
-    def display_stream(self, stream):
+    def display_stream(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(('0.0.0.0', 7000))
-
-        message = str.encode(f'STREAM {stream}')
-        sock.sendto(message, (self.pop, 6000))
 
         ffplay = subprocess.Popen(
             ['ffplay', '-i', 'pipe:0', '-hide_banner'],
@@ -133,8 +148,10 @@ class oClient:
             menor = 999
             for pop in valores:
                 if valores[pop] < menor:
+                    self.cancel_stream() # Cancela stream vinda do pop atual
                     self.pop = pop
                     menor = valores[pop]
+                    self.request_stream() # Pede a stream ao novo pop
                     print(f'O ponto de presença foi alterado para {self.pop}')
             time.sleep(60)
 

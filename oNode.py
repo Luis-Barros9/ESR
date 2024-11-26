@@ -172,7 +172,7 @@ class Node:
                     self.neighbours[parent] = False # Adiciona avô aos vizinhos
 
             except socket.timeout:
-                self.neighbours
+                pass
             finally:
                 sock.close()
             time.sleep(60) # per minute

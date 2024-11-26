@@ -2,4 +2,4 @@ NODO:
 1 - Caso mude o pai na arvore de distribuição, exigir as streams que necessita
 
 CLIENTE:
-2 - Cliente exigir stream ao novo pop
+2 - Confirmação por parte do pop de que a stream foi cancelada e que foi iniciada
