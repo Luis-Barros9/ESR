@@ -1,4 +1,0 @@
-1. Árvore de distribuição
-    >> os nodos só atualizam a árvore de receber métricas melhores MAS
-    caso não melhore, também não avisa os filhos
-    - Faz sentido fazer assim ou alertamos sempre para que atualizem a sua árvore se possível?

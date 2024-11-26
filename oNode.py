@@ -111,6 +111,12 @@ class Node:
             msg = f'LATENCY:{self.flow_latency}'.encode()
             self.server.sendto(msg, address)
 
+        elif msg.startswith('KEEPALIVE'):
+
+            print(Back.LIGHTBLUE_EX + f"[INFO] Received from {address[0]}: KEEPALIVE" + Style.RESET_ALL)
+            msg = 'ALIVE'.encode()
+            self.server.sendto(msg, address)
+
     # Build distribution tree - UDP
     def build_distribution_tree(self, address):
         for neighbour in self.neighbours:
@@ -136,6 +142,40 @@ class Node:
         stream_id = packet['id']
         for client in self.streams[stream_id]:
             socket.sendto(data, (client, 7000))
+
+    # Check if neighbours are alive
+    def keep_alive(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(('0.0.0.0', 6001))
+        sock.timeout(self.timeout)
+
+        neighbours_online = 0
+
+        while True:
+            try:
+                for neighbour in self.neighbours:
+                    message = str.encode('LISTSTREAMS')
+                    sock.sendto(message, (neighbour, 6000))
+
+                    data, addr = sock.recvfrom(1024)
+                    if data.decode() == 'ALIVE':
+                        neighbours_online += 1
+                        self.neighbours[neighbour] = True
+
+                if neighbours_online == 1:
+                    print()
+                    message = str.encode('PARENT')
+                    sock.sendto(message, (self.flow_parent, 6000))
+
+                    data, addr = sock.recvfrom(1024)
+                    parent = data.decode()
+                    self.neighbours[parent] = False # Adiciona avô aos vizinhos
+
+            except socket.timeout:
+                self.neighbours
+            finally:
+                sock.close()
+            time.sleep(60) # per minute
 
     # Get list of streams available to play from flow parent - UDP
     def get_list_of_streams(self):
