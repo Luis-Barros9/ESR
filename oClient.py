@@ -5,6 +5,8 @@ import subprocess
 import time
 from colorama import Back, Style
 
+MONITOR_PINGS = 5
+
 class oClient:
     def __init__(self):
         self.pops = [] # Lista pontos de presença
@@ -118,29 +120,50 @@ class oClient:
         while True:
             valores = {}
             for pop in self.pops:
-                try:
-                    msg = str.encode('PING')
-                    start = time.time()
-                    self.socket.sendto(msg, (pop, 6000))
-                    response = self.socket.recv(1024)
-                    response = response.decode()
-                    if response:
-                        _, latency = response.split(':')
-                        end = time.time()
-                        volta = start - end
-                        valores[pop] = (round(volta + float(latency), 5))
-                except socket.timeout:
-                    print(Back.YELLOW + '[WARNING] Timeout - Reenvio de pedido PING.' + Style.RESET_ALL)
-                    continue
+                times = []
+                for _ in range(MONITOR_PINGS):
+                    try:
+                        msg = str.encode('PING')
+                        start = time.time()
+                        self.socket.sendto(msg, (pop, 6000))
+                        response = self.socket.recv(1024)
+                        response = response.decode()
+                        if response:
+                            _, latency = response.split(':')
+                            end = time.time()
+                            volta = start - end
+                            times.append(round(volta + float(latency), 5))
+                    except socket.timeout:
+                        print(Back.YELLOW + '[WARNING] Timeout - Falha a de pedido PING.' + Style.RESET_ALL)
+                        continue
+                if len(times) == 0:
+                    valores[pop] = (9999999, 100000)
+                else:
+                    valores[pop] = (sum(times)/len(times), MONITOR_PINGS/len(times))
 
-            menor = 999
+            menor = None
             current_pop = self.pop
             for pop in valores:
-                if valores[pop] < menor:
-                    self.pop = pop
-                    menor = valores[pop]
-                    print(f'O ponto de presença foi alterado para {self.pop}')
+                if menor is None:
+                    current_pop = pop
+                    if valores[pop][1] < 2: # 2 pings por acerto
+                        menor = valores[pop][0] * (valores[pop][1])
+                    elif valores[pop][1] < 3.5: # 3.5 pings por acerto
+                        menor = valores[pop][0] * valores[pop][1] * 1.5
+                    else:
+                        menor = valores[pop][0] * valores[pop][1] * 2
+                else:
+                    atual =99999999
+                    if valores[pop][1] < 2:
+                        atual = valores[pop][0] * (valores[pop][1])
+                    elif valores[pop][1] < 3.5:
+                        atual = valores[pop][0] * valores[pop][1] * 1.5
+                    else:
+                        atual = valores[pop][0] * valores[pop][1] * 2
 
+                    if atual < menor:
+                        menor = atual
+                        current_pop = pop
             if not current_pop == self.pop:
                 self.cancel_stream() # Cancela stream vinda do pop atual
                 self.request_stream() # Pede a stream ao novo pop
