@@ -58,11 +58,12 @@ class Node:
             current_parent = self.flow_parent
 
             total_latency = float(latency) + time.time() - float(t)
-            if total_latency < self.flow_latency or (total_latency == self.flow_latency and int(jump) + 1 <= self.jump) or current_flood > self.flow_current_flood:
+            if total_latency < self.flow_latency or (total_latency == self.flow_latency and int(jump) + 1 <= self.jump) or int(current_flood) > self.flow_current_flood:
                 self.flow_jump = int(jump) + 1
                 self.flow_parent = ip
                 self.flow_latency = round(total_latency, 5)
-                print(Back.LIGHTBLUE_EX + f'[INFO] Arvore de distribuição construída: {self.flow_parent} - {self.flow_latency} - {self.flow_jump}' + Style.RESET_ALL)
+                self.flow_current_flood = int(current_flood)
+                print(Back.LIGHTBLUE_EX + f'[INFO] Arvore de distribuição construída: P:{self.flow_parent} - L:{self.flow_latency} - J:{self.flow_jump} - F:{self.flow_current_flood}' + Style.RESET_ALL)
             self.build_distribution_tree(ip)
 
             if not current_parent == self.flow_parent:
@@ -174,7 +175,7 @@ class Node:
                         self.neighbours[neighbour] = True
 
                 if neighbours_online == 1:
-                    print()
+                    print("A PEDIR NODO PAI")
                     message = str.encode('PARENT')
                     sock.sendto(message, (self.flow_parent, 6000))
 

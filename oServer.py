@@ -70,7 +70,7 @@ class Server:
             self.server.sendto(response, address)
 
     # Build distribution tree - UDP
-    # every 5 minutes
+    # every 2 minutes
     def build_distribution_tree(self):
         current_flood = 1
         while(True):
@@ -79,7 +79,7 @@ class Server:
                 message = str.encode(f'BUILDTREE:{current_flood}:{time.time()}:0:0:{self.videos}') # . : horario : latência : saltos
                 self.server.sendto(message, (neighbour, 6000))
             current_flood += 1
-            time.sleep(300)
+            time.sleep(120)
 
     # Make list of videos available to stream
     def make_list_of_videos(self):

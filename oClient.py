@@ -9,10 +9,15 @@ class oClient:
     def __init__(self):
         self.pops = [] # Lista pontos de presença
         self.pop = '' # Ponto de presença a ser usado
-        self.timeout = 3 # Tempo para timeout em segundos
+        self.timeout = 1 # Tempo para timeout em segundos
 
         self.stream_choosen = ''
         self.streams_list = []
+
+        # Client socket
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.bind(('0.0.0.0', 6000))
+        self.socket.settimeout(self.timeout)
 
         # RUN!!!
         self.get_points_of_presence()
@@ -31,31 +36,25 @@ class oClient:
 
     # Get points of presence from server - UDP
     def get_points_of_presence(self):
-        server_conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        server_conn.settimeout(self.timeout)
         while True:
             try:
                 # Envia mensagem
                 message = str.encode('POPS')
-                server_conn.sendto(message,  ('10.0.0.10', 6000))
+                self.socket.sendto(message,  ('10.0.0.10', 6000))
 
                 # Recebe lista de POPs
-                self.pops = pickle.loads(server_conn.recv(2048))
+                self.pops = pickle.loads(self.socket.recv(2048))
                 print(Back.GREEN + '[SUCCESS] Pontos de presença obtidos com sucesso.' + Style.RESET_ALL)
-                server_conn.close()
                 break
             except socket.timeout:
                 print(Back.YELLOW + '[WARNING] Timeout - Reenvio de pedido de lista de pontos de presença.' + Style.RESET_ALL)
             except:
                 print(Back.RED + '[FAIL] Servidor não está a atender pedidos.' + Style.RESET_ALL)
-                server_conn.close()
+                self.socket.close()
                 break
 
     # Get list of streams available to play (from POP) - UDP
     def get_list_of_streams(self):
-        pop_conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        pop_conn.settimeout(self.timeout)
-        
         while self.pop == '':
             time.sleep(1)
 
@@ -63,36 +62,29 @@ class oClient:
             try:
                 # Envia mensagem
                 message = str.encode('LISTSTREAMS')
-                pop_conn.sendto(message, (self.pop, 6000))
+                self.socket.sendto(message, (self.pop, 6000))
 
                 # Recebe lista de streams
-                self.streams_list = pickle.loads(pop_conn.recv(1024))
+                self.streams_list = pickle.loads(self.socket.recv(1024))
                 print(Back.GREEN + f'[SUCCESS] Lista de streams obtida com sucesso. STREAMS: {self.streams_list}' + Style.RESET_ALL)
-                pop_conn.close()
                 break
             except socket.timeout:
                 print(Back.YELLOW + '[WARNING] Timeout - Reenvio de pedido de lista de streams.' + Style.RESET_ALL)
                 continue
             except:
                 print(Back.RED + '[FAIL] Servidor não está a atender pedidos.' + Style.RESET_ALL)
-                pop_conn.close()
+                self.socket.close()
                 break
 
     # Request stream - UDP
     def request_stream(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(('0.0.0.0', 6000))
-
         message = str.encode(f'STREAM {self.stream_choosen}')
-        sock.sendto(message, (self.pop, 6000))
+        self.socket.sendto(message, (self.pop, 6000))
 
     # Cancel stream - UDP
     def cancel_stream(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(('0.0.0.0', 6000))
-
         message = str.encode(f'NOSTREAM {self.stream_choosen}')
-        sock.sendto(message, (self.pop, 6000))  
+        self.socket.sendto(message, (self.pop, 6000))
 
     # Display video from server (POP) - UDP
     def display_stream(self):
@@ -100,7 +92,7 @@ class oClient:
         sock.bind(('0.0.0.0', 7000))
 
         ffplay = subprocess.Popen(
-            ['ffplay', '-i', 'pipe:0', '-hide_banner'],
+            ['ffplay', '-i', 'pipe:0', '-hide_banner', '-infbuf'],
             stdin=subprocess.PIPE,
             stderr=subprocess.DEVNULL)
 
@@ -116,24 +108,21 @@ class oClient:
         except:
             print(Back.RED + f'[FAIL] Erro a mostrar stream' + Style.RESET_ALL)
         finally:
+            self.cancel_stream()
             sock.close()
             ffplay.stdin.close()
             ffplay.wait()
-            self.cancel_stream()
 
 ######## MONITORIZAÇÃO DE POPS POR PARTE DO CLIENTE ########
     def monitor_points_of_presence(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind(('0.0.0.0', 6000))
-        s.settimeout(1)
         while True:
             valores = {}
             for pop in self.pops:
                 try:
                     msg = str.encode('PING')
                     start = time.time()
-                    s.sendto(msg, (pop, 6000))
-                    response = s.recv(1024)
+                    self.socket.sendto(msg, (pop, 6000))
+                    response = self.socket.recv(1024)
                     response = response.decode()
                     if response:
                         _, latency = response.split(':')
