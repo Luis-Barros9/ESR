@@ -141,25 +141,23 @@ class oClient:
                 else:
                     valores[pop] = (sum(times)/len(times), MONITOR_PINGS/len(times))
 
+
+            def avlia(data):
+                result = data[0] * data[1]
+                if data[1] >= 2: # 2 pings por acerto
+                    if data[1] < 3.5: # 3.5 pings por acerto
+                        result *= 1.5
+                    else:
+                        result *= 2
+                return result
             menor = None
             current_pop = self.pop
             for pop in valores:
                 if menor is None:
                     current_pop = pop
-                    if valores[pop][1] < 2: # 2 pings por acerto
-                        menor = valores[pop][0] * (valores[pop][1])
-                    elif valores[pop][1] < 3.5: # 3.5 pings por acerto
-                        menor = valores[pop][0] * valores[pop][1] * 1.5
-                    else:
-                        menor = valores[pop][0] * valores[pop][1] * 2
+                    menor = avlia(valores[pop])
                 else:
-                    atual =99999999
-                    if valores[pop][1] < 2:
-                        atual = valores[pop][0] * (valores[pop][1])
-                    elif valores[pop][1] < 3.5:
-                        atual = valores[pop][0] * valores[pop][1] * 1.5
-                    else:
-                        atual = valores[pop][0] * valores[pop][1] * 2
+                    atual =avlia(valores[pop])
 
                     if atual < menor:
                         menor = atual
