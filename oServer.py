@@ -114,7 +114,6 @@ class Server:
 
             if not video_data:
                 video_file.seek(0)
-                time.sleep(interval) # TESTE - tirar caso não resolva problema de streaming
                 continue
 
             packet = {

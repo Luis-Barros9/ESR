@@ -91,6 +91,9 @@ class Node:
                 self.streams[stream_id].append(client)
                 print(Back.LIGHTBLUE_EX + f'[INFO] New client added to "{stream_id}" clients list.' + Style.RESET_ALL)
 
+            # Envia confirmação ao cliente
+            self.server.sendto('OKAY'.encode(), address)
+
         elif msg.startswith('NOSTREAM'):
 
             # Remove o cliente da lista de clientes de uma stream
@@ -102,6 +105,9 @@ class Node:
                 if self.streams[stream_id] == 0:
                     self.server.sendto(msg.encode('utf-8'), (self.flow_parent, 6000))
                     print(Back.LIGHTBLUE_EX + f'[INFO] Stream "{stream_id}" removed from this node.' + Style.RESET_ALL)
+
+            # Envia confirmação ao cliente
+            self.server.sendto('OKAY'.encode(), address)
 
         elif msg.startswith('PARENT'):
 

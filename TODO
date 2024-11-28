@@ -1,1 +1,2 @@
-fix - cliente a pedir stream, causa erro no pop
+fix - redundancia clientes e nodos para evitar perdas
+fix - falha de imagem após mudar pop

@@ -78,13 +78,51 @@ class oClient:
 
     # Request stream - UDP
     def request_stream(self):
-        message = str.encode(f'STREAM {self.stream_choosen}')
-        self.socket.sendto(message, (self.pop, 6000))
+        tries = 0
+        while True:
+            if tries > 3:
+                break
+            try:
+                # Envia mensagem
+                message = str.encode(f'STREAM {self.stream_choosen}')
+                self.socket.sendto(message, (self.pop, 6000))
+
+                # Recebe confirmação
+                response = self.socket.recv(1024)
+                if response.decode() == 'OKAY':
+                    break
+            except socket.timeout:
+                print(Back.YELLOW + '[WARNING] Timeout - Reenvio de pedido de stream.' + Style.RESET_ALL)
+                tries += 1
+                continue
+            except:
+                print(Back.RED + '[FAIL] Servidor não está a atender pedidos.' + Style.RESET_ALL)
+                self.socket.close()
+                break
 
     # Cancel stream - UDP
     def cancel_stream(self):
-        message = str.encode(f'NOSTREAM {self.stream_choosen}')
-        self.socket.sendto(message, (self.pop, 6000))
+        tries = 0
+        while True:
+            if tries > 3:
+                break;
+            try:
+                # Envia mensagem
+                message = str.encode(f'NOSTREAM {self.stream_choosen}')
+                self.socket.sendto(message, (self.pop, 6000))
+
+                # Recebe confirmação
+                response = self.socket.recv(1024)
+                if response.decode() == 'OKAY':
+                    break
+            except socket.timeout:
+                print(Back.YELLOW + '[WARNING] Timeout - Reenvio de pedido para cancelar stream.' + Style.RESET_ALL)
+                tries += 1
+                continue
+            except:
+                print(Back.RED + '[FAIL] Servidor não está a atender pedidos.' + Style.RESET_ALL)
+                self.socket.close()
+                break
 
     # Display video from server (POP) - UDP
     def display_stream(self):
@@ -141,7 +179,7 @@ class oClient:
                     menor = valores[pop]
                     print(f'O ponto de presença foi alterado para {self.pop}')
 
-            if not current_pop == self.pop:
+            if current_pop != self.pop and self.stream_choosen != '':
                 self.cancel_stream() # Cancela stream vinda do pop atual
                 self.request_stream() # Pede a stream ao novo pop
 
