@@ -66,8 +66,14 @@ class Server:
         elif msg.startswith('PARENT'):
 
             # Devolve o IP do nodo pai - Neste caso devolve o próprio servidor
-            response = 'SERVER'.encode()
+            response = '10.0.0.10'.encode()
             self.server.sendto(response, address)
+
+        elif msg.startswith('KEEPALIVE'):
+
+            print(Back.LIGHTBLUE_EX + f"[INFO] Received from {address[0]}: KEEPALIVE" + Style.RESET_ALL)
+            msg = 'ALIVE'.encode()
+            self.server.sendto(msg, address)
 
     # Build distribution tree - UDP
     # every 2 minutes
@@ -79,7 +85,7 @@ class Server:
                 message = str.encode(f'BUILDTREE:{current_flood}:{time.time()}:0:0:{self.videos}') # . : horario : latência : saltos
                 self.server.sendto(message, (neighbour, 6000))
             current_flood += 1
-            time.sleep(120)
+            time.sleep(60)
 
     # Make list of videos available to stream
     def make_list_of_videos(self):

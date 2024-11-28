@@ -33,10 +33,10 @@ class Node:
 
         # RUN!!!
         self.get_neighbours_from_bootstrapper()
-        #threading.Thread(target=self.keep_alive).start()
+        threading.Thread(target=self.keep_alive).start()
         threading.Thread(target=self.passthrough_streams).start()
 
-        print(Back.LIGHTBLUE_EX + '[INFO] Node running.')
+        print(Back.LIGHTBLUE_EX + '[INFO] Node running.' + Style.RESET_ALL)
         try:
             while True:
                 data, addr = self.server.recvfrom(1024)
@@ -64,7 +64,7 @@ class Node:
                 self.flow_latency = round(total_latency, 5)
                 self.flow_current_flood = int(current_flood)
                 print(Back.LIGHTBLUE_EX + f'[INFO] Arvore de distribuição construída: P:{self.flow_parent} - L:{self.flow_latency} - J:{self.flow_jump} - F:{self.flow_current_flood}' + Style.RESET_ALL)
-            self.build_distribution_tree(ip)
+                self.build_distribution_tree(ip)
 
             if not current_parent == self.flow_parent:
                 # Cancela as streams vindas do pai :')
@@ -159,34 +159,29 @@ class Node:
     def keep_alive(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(('0.0.0.0', 6001))
-        sock.timeout(self.timeout)
-
-        neighbours_online = 0
+        sock.settimeout(self.timeout)
 
         while True:
-            try:
-                for neighbour in self.neighbours:
-                    message = str.encode('LISTSTREAMS')
+            print(Back.LIGHTBLUE_EX + f"[INFO] Keep Alive" + Style.RESET_ALL)
+            for neighbour in self.neighbours:
+                try:
+                    message = str.encode('KEEPALIVE')
                     sock.sendto(message, (neighbour, 6000))
 
                     data, addr = sock.recvfrom(1024)
                     if data.decode() == 'ALIVE':
-                        neighbours_online += 1
                         self.neighbours[neighbour] = True
+                except socket.timeout:
+                    self.neighbours[neighbour] = False
 
-                if neighbours_online == 1:
-                    print("A PEDIR NODO PAI")
-                    message = str.encode('PARENT')
-                    sock.sendto(message, (self.flow_parent, 6000))
+            if sum(self.neighbours.values()) == 1 and not self.flow_parent == '':
+                print(Back.YELLOW + f"[WARNING] Just one neighbour alive. Requesting grandparent. " + Style.RESET_ALL)
+                message = str.encode('PARENT')
+                sock.sendto(message, (self.flow_parent, 6000))
 
-                    data, addr = sock.recvfrom(1024)
-                    parent = data.decode()
-                    self.neighbours[parent] = False # Adiciona avô aos vizinhos
-
-            except socket.timeout:
-                pass
-            finally:
-                sock.close()
+                data, addr = sock.recvfrom(1024)
+                parent = data.decode()
+                self.neighbours[parent] = False # Adiciona avô aos vizinhos
             time.sleep(60) # per minute
 
     # Get list of streams available to play from flow parent - UDP
