@@ -25,13 +25,22 @@ class oClient:
         self.get_list_of_streams()
 
         # Escolhe uma stream da lista de streams disponiveis
-        print('Escolha a stream:')
+        print('--- Lista de streams ---')
         for stream in self.streams_list:
             print(stream)
-        self.stream_choosen = input()
+
+        while True:
+            self.stream_choosen = input('Digite a stream desejada: ')
+            if not self.stream_choosen in self.streams_list:
+                print(Back.RED + '[FAIL] Stream inserida não existe.' + Style.RESET_ALL)
+            else:
+                break
 
         # Display stream
-        self.request_stream()
+        while self.pop == '': # Aguardar até pop ser selecionado
+            time.sleep(1)
+        message = str.encode(f'STREAM {self.stream_choosen}')
+        self.socket.sendto(message, (self.pop, 6000))
         self.display_stream()
 
     # Get points of presence from server - UDP
@@ -76,77 +85,49 @@ class oClient:
                 self.socket.close()
                 break
 
-    # Request stream - UDP
-    def request_stream(self):
-        tries = 0
-        while True:
-            if tries > 3:
-                break
-            try:
-                # Envia mensagem
-                message = str.encode(f'STREAM {self.stream_choosen}')
-                self.socket.sendto(message, (self.pop, 6000))
-
-                # Recebe confirmação
-                response = self.socket.recv(1024)
-                if response.decode() == 'OKAY':
-                    break
-            except socket.timeout:
-                print(Back.YELLOW + '[WARNING] Timeout - Reenvio de pedido de stream.' + Style.RESET_ALL)
-                tries += 1
-                continue
-            except:
-                print(Back.RED + '[FAIL] Servidor não está a atender pedidos.' + Style.RESET_ALL)
-                self.socket.close()
-                break
-
-    # Cancel stream - UDP
-    def cancel_stream(self):
-        tries = 0
-        while True:
-            if tries > 3:
-                break;
-            try:
-                # Envia mensagem
-                message = str.encode(f'NOSTREAM {self.stream_choosen}')
-                self.socket.sendto(message, (self.pop, 6000))
-
-                # Recebe confirmação
-                response = self.socket.recv(1024)
-                if response.decode() == 'OKAY':
-                    break
-            except socket.timeout:
-                print(Back.YELLOW + '[WARNING] Timeout - Reenvio de pedido para cancelar stream.' + Style.RESET_ALL)
-                tries += 1
-                continue
-            except:
-                print(Back.RED + '[FAIL] Servidor não está a atender pedidos.' + Style.RESET_ALL)
-                self.socket.close()
-                break
-
     # Display video from server (POP) - UDP
     def display_stream(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(('0.0.0.0', 7000))
+        sock.settimeout(self.timeout)
 
         ffplay = subprocess.Popen(
             ['ffplay', '-i', 'pipe:0', '-hide_banner', '-infbuf'],
             stdin=subprocess.PIPE,
             stderr=subprocess.DEVNULL)
 
+        pops_timeout = []
+
         try:
             while True:
-                data, _ = sock.recvfrom(2200)
+                try:
+                    data, address = sock.recvfrom(2200)
 
-                packet = pickle.loads(data)
-                video = packet['data']
+                    # Se o pacote recebido for de um pop diferente do selecionado atualmente
+                    # enviar mensagem para cancelar o envio de pacotes
+                    if address[0] != self.pop:
+                        message = str.encode(f'NOSTREAM {self.stream_choosen}')
+                        self.socket.sendto(message, (address[0], 6000))
+                    else:
+                        if len(pops_timeout) > 0:
+                            pops_timeout = []
 
-                ffplay.stdin.write(video)
-                ffplay.stdin.flush()
+                    packet = pickle.loads(data)
+                    video = packet['data']
+                    ffplay.stdin.write(video)
+                    ffplay.stdin.flush()
+                except socket.timeout: # 5 segundos
+                    pops_timeout.append(self.pop)
+                    for pop in self.pops:
+                        if pop not in pops_timeout:
+                            self.pop = pop
+                            message = str.encode(f'STREAM {self.stream_choosen}')
+                            self.socket.sendto(message, (self.pop, 6000))
+                            break
         except:
             print(Back.RED + f'[FAIL] Erro a mostrar stream' + Style.RESET_ALL)
-        finally:
-            self.cancel_stream()
+            message = str.encode(f'NOSTREAM {self.stream_choosen}')
+            self.socket.sendto(message, (address[0], 6000))
             sock.close()
             ffplay.stdin.close()
             ffplay.wait()
@@ -156,34 +137,60 @@ class oClient:
         while True:
             valores = {}
             for pop in self.pops:
-                try:
-                    msg = str.encode('PING')
-                    start = time.time()
-                    self.socket.sendto(msg, (pop, 6000))
-                    response = self.socket.recv(1024)
-                    response = response.decode()
-                    if response:
-                        _, latency = response.split(':')
-                        end = time.time()
-                        volta = start - end
-                        valores[pop] = (round(volta + float(latency), 5))
-                except socket.timeout:
-                    print(Back.YELLOW + '[WARNING] Timeout - Reenvio de pedido PING.' + Style.RESET_ALL)
-                    continue
+                times = []
+                for _ in range(5):
+                    try:
+                        msg = str.encode('PING')
+                        start = time.time()
+                        self.socket.sendto(msg, (pop, 6000))
+                        response = self.socket.recv(1024).decode()
+                        if response:
+                            _, latency = response.split(':')
+                            end = time.time()
+                            volta = start - end
+                            times.append(round(volta + float(latency), 5))
+                    except socket.timeout:
+                        print(Back.YELLOW + '[WARNING] Timeout - Reenvio de pedido PING.' + Style.RESET_ALL)
+                        continue
 
-            menor = 999
-            current_pop = self.pop
+                if len(times) == 0:
+                    valores[pop] = (9999999, 100000)
+                else:
+                    valores[pop] = (sum(times)/len(times), 5/len(times))
+
+            last_pop = self.pop
+
+            menor = None
             for pop in valores:
-                if valores[pop] < menor:
+                if menor is None:
+                    menor = self.avalia(valores[pop])
                     self.pop = pop
-                    menor = valores[pop]
-                    print(f'O ponto de presença foi alterado para {self.pop}')
+                else:
+                    atual = self.avalia(valores[pop])
+                    if atual < menor:
+                        menor = atual
+                        self.pop = pop
+                        print(f'O ponto de presença foi alterado para {self.pop}')
 
-            if current_pop != self.pop and self.stream_choosen != '':
-                self.cancel_stream() # Cancela stream vinda do pop atual
-                self.request_stream() # Pede a stream ao novo pop
+            if last_pop != self.pop and self.stream_choosen != '':
+                # Cancela stream
+                message = str.encode(f'NOSTREAM {self.stream_choosen}')
+                self.socket.sendto(message, (last_pop, 6000))
+
+                # Pede a stream ao novo pop
+                message = str.encode(f'STREAM {self.stream_choosen}')
+                self.socket.sendto(message, (self.pop, 6000))
 
             time.sleep(60)
+
+    def avalia(self, data):
+        result = data[0] * data[1]
+        if data[1] >= 2: # 2 pings por acerto
+            if data[1] < 3.5: # 3.5 pings por acerto
+                result *= 1.5
+            else:
+                result *= 2
+        return result
 
 if __name__ == "__main__":
     client = oClient()

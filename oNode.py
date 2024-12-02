@@ -42,6 +42,8 @@ class Node:
                 data, addr = self.server.recvfrom(1024)
                 threading.Thread(target=self.handler, args=(data, addr)).start()
         finally:
+            for stream in self.streams:
+                self.server.sendto(f'NOSTREAM {stream}'.encode(), (self.flow_parent, 6000))
             self.server.close()
 
     # Handler for clients
@@ -55,7 +57,7 @@ class Node:
 
             self.streams_list = ast.literal_eval(streams)
 
-            current_parent = self.flow_parent
+            parent = self.flow_parent
 
             total_latency = float(latency) + time.time() - float(t)
             if total_latency < self.flow_latency or (total_latency == self.flow_latency and int(jump) + 1 <= self.jump) or int(current_flood) > self.flow_current_flood:
@@ -66,14 +68,14 @@ class Node:
                 print(Back.LIGHTBLUE_EX + f'[INFO] Arvore de distribuição construída: P:{self.flow_parent} - L:{self.flow_latency} - J:{self.flow_jump} - F:{self.flow_current_flood}' + Style.RESET_ALL)
                 self.build_distribution_tree(ip)
 
-            if not current_parent == self.flow_parent:
+            if not parent == self.flow_parent:
                 # Cancela as streams vindas do pai :')
                 for stream in self.streams:
-                    self.server.sendto(f'NOSTREAM {stream}'.encode(), (current_parent, 6000))
+                    self.server.sendto(f'NOSTREAM {stream}'.encode(), (parent, 6000))
 
                 # Pede as streams necessárias ao novo pai :)
                 for stream in self.streams:
-                    self.server.sendto(f'STREAM {stream}'.encode(), (current_parent, 6000))
+                    self.server.sendto(f'STREAM {stream}'.encode(), (self.flow_parent, 6000))
 
         elif msg.startswith('STREAM'):
 
@@ -91,23 +93,20 @@ class Node:
                 self.streams[stream_id].append(client)
                 print(Back.LIGHTBLUE_EX + f'[INFO] New client added to "{stream_id}" clients list.' + Style.RESET_ALL)
 
-            # Envia confirmação ao cliente
-            self.server.sendto('OKAY'.encode(), address)
-
         elif msg.startswith('NOSTREAM'):
 
             # Remove o cliente da lista de clientes de uma stream
             client = str(address[0])
             _, stream_id = msg.split()
             if stream_id in self.streams:
+
                 self.streams[stream_id].remove(client)
                 print(Back.LIGHTBLUE_EX + f'[INFO] Client removed from "{stream_id}" clients list.' + Style.RESET_ALL)
+
                 if self.streams[stream_id] == 0:
+                    del self.streams[stream_id]
                     self.server.sendto(msg.encode('utf-8'), (self.flow_parent, 6000))
                     print(Back.LIGHTBLUE_EX + f'[INFO] Stream "{stream_id}" removed from this node.' + Style.RESET_ALL)
-
-            # Envia confirmação ao cliente
-            self.server.sendto('OKAY'.encode(), address)
 
         elif msg.startswith('PARENT'):
 
@@ -149,7 +148,16 @@ class Node:
         streams.bind(('0.0.0.0', 7000))
         try:
             while True:
-                data, addr = streams.recvfrom(2200)
+                data, address = streams.recvfrom(2200)
+
+                # Se receber streams de alguém que não seja o parent
+                # mandar pedido de cancelar stream
+                if address[0] != self.flow_parent:
+                    for stream in self.streams:
+                        message = str.encode(f'NOSTREAM {stream}')
+                        streams.sendto(message, (address[0], 6000))
+                    continue
+
                 self.send_packet(streams, data)
         finally:
             self.server.close()
@@ -168,7 +176,6 @@ class Node:
         sock.settimeout(self.timeout)
 
         while True:
-            print(Back.LIGHTBLUE_EX + f"[INFO] Keep Alive" + Style.RESET_ALL)
             for neighbour in self.neighbours:
                 try:
                     message = str.encode('KEEPALIVE')
@@ -178,6 +185,15 @@ class Node:
                     if data.decode() == 'ALIVE':
                         self.neighbours[neighbour] = True
                 except socket.timeout:
+                    if neighbour == self.flow_parent:
+                        for n in self.neighbours:
+                            if self.neighbours[n] == True:
+                                self.flow_parent = n
+                                for stream in self.streams:
+                                    self.server.sendto(f'NOSTREAM {stream}'.encode(), (neighbour, 6000))
+                                for stream in self.streams:
+                                    self.server.sendto(f'STREAM {stream}'.encode(), (n, 6000))
+                                break
                     self.neighbours[neighbour] = False
 
             if sum(self.neighbours.values()) == 1 and not self.flow_parent == '':
