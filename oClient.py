@@ -165,12 +165,17 @@ class oClient:
                 if menor is None:
                     menor = self.avalia(valores[pop])
                     self.pop = pop
+                    print(f'Initial evaluation: {menor} for pop {pop}')
                 else:
+                    print('Comparing ') 
                     atual = self.avalia(valores[pop])
+                    print(f'Evaluating: {atual} for pop {pop}')
                     if atual < menor:
                         menor = atual
                         self.pop = pop
-                        print(f'O ponto de presença foi alterado para {self.pop}')
+                        print(f'POP changed to {self.pop} with a new lower value of {menor}')
+                    else:
+                        print(f'No change, current value is lower ({menor})')
 
             if last_pop != self.pop and self.stream_choosen != '':
                 # Cancela stream
@@ -190,6 +195,7 @@ class oClient:
                 result *= 1.5
             else:
                 result *= 2
+        result = round(result,6)
         return result
 
 if __name__ == "__main__":
