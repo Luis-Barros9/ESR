@@ -76,7 +76,7 @@ class Server:
             self.server.sendto(msg, address)
 
     # Build distribution tree - UDP
-    # every 2 minutes
+    # every 60 sec
     def build_distribution_tree(self):
         current_flood = 1
         while(True):
